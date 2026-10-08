@@ -219,11 +219,11 @@ ScrollView {
             }
         }
         GridLayout {
-            visible: page.mode===0 || page.mode===3; columns: Math.max(2,Math.floor(page.width/190)); Layout.fillWidth: true; columnSpacing: 16; rowSpacing: 20
+            visible: page.mode===0 || page.mode===3; columns: Math.max(2,Math.floor(page.width/190)); uniformCellWidths: true; Layout.fillWidth: true; columnSpacing: 16; rowSpacing: 20
             // Liked songs always come first, like a pinned playlist.
             ColumnLayout {
                 visible: auth.connected
-                Layout.fillWidth: true; Layout.preferredWidth: 180; Layout.alignment: Qt.AlignTop; spacing: 8
+                Layout.fillWidth: true; Layout.preferredWidth: 180; Layout.minimumWidth: 0; Layout.alignment: Qt.AlignTop; spacing: 8
                 AbstractButton {
                     id: likedCard
                     Layout.fillWidth: true; Layout.preferredHeight: width; hoverEnabled: true
@@ -234,13 +234,13 @@ ScrollView {
                     Accessible.name: "Open liked songs"
                 }
                 Label { text: "Liked songs"; color: Theme.text; font.bold: true; font.pixelSize: 14; Layout.fillWidth: true; elide: Text.ElideRight }
-                Label { text: "Your saved tracks · Ctrl+2"; color: Theme.muted; font.pixelSize: 11; Layout.preferredHeight: 26; verticalAlignment: Text.AlignVCenter }
+                Label { text: page.compact ? "Your saved tracks" : "Your saved tracks · Ctrl+2"; color: Theme.muted; font.pixelSize: 11; Layout.fillWidth: true; Layout.preferredHeight: 26; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
             }
             Repeater {
                 model: (page.mode===0 || page.mode===3) ? page.entries : []
                 delegate: ColumnLayout {
                     required property var modelData
-                    Layout.fillWidth: true; Layout.preferredWidth: 180; spacing: 8
+                    Layout.fillWidth: true; Layout.preferredWidth: 180; Layout.minimumWidth: 0; Layout.alignment: Qt.AlignTop; spacing: 8
                     Item {
                         Layout.fillWidth: true; Layout.preferredHeight: width
                         CoverArt {
@@ -252,12 +252,12 @@ ScrollView {
                         ActionButton { anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8; symbol: "play"; filled: true; hint: "Play " + modelData.name; enabled: page.canPlay; onClicked: spotify.play(modelData.uri) }
                     }
                     Button {
-                        text: modelData.name; Layout.fillWidth: true; implicitHeight: 24; padding: 0
+                        text: modelData.name; Layout.fillWidth: true; Layout.minimumWidth: 0; implicitWidth: 0; implicitHeight: 24; padding: 0
                         background: Rectangle { radius: 6; color: "transparent"; border.width: parent.visualFocus?1:0; border.color: Theme.primary }
-                        contentItem: Text { text: parent.text; color: Theme.text; font.bold: true; font.pixelSize: 14; elide: Text.ElideRight; textFormat: Text.PlainText }
+                        contentItem: Text { text: parent.text; width: parent.width; color: Theme.text; font.bold: true; font.pixelSize: 14; elide: Text.ElideRight; horizontalAlignment: Text.AlignLeft; verticalAlignment: Text.AlignVCenter; textFormat: Text.PlainText }
                         onClicked: page.openPlaylist(modelData)
                     }
-                    ActionButton { text: "Spotify ↗"; compact: true; implicitHeight: 26; ink: Theme.muted; onClicked: spotify.openSpotify(modelData.url) }
+                    ActionButton { text: "Spotify ↗"; compact: true; implicitHeight: 26; Layout.alignment: Qt.AlignLeft; ink: Theme.muted; onClicked: spotify.openSpotify(modelData.url) }
                 }
             }
         }
