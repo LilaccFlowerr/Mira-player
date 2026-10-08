@@ -9,7 +9,7 @@ jobs:
     container: fedora:44
     steps:
       - name: Build dependencies
-        run: dnf install -y git gcc-c++ cmake ninja-build qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtshadertools-devel qt6-qtwebengine-devel qt6-qtwebchannel-devel libsecret rpm-build
+        run: dnf install -y --setopt=retries=5 --disablerepo=fedora-cisco-openh264 git gcc-c++ cmake ninja-build qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtshadertools-devel qt6-qtwebengine-devel qt6-qtwebchannel-devel libsecret rpm-build
       - uses: actions/checkout@v4
       - run: cmake --preset release && cmake --build --preset release --parallel 2
       - run: cpack --config build/CPackConfig.cmake -B dist

@@ -73,7 +73,9 @@ QVariantMap SpotifyApi::item(QJsonObject o){
     auto album=o["album"].toObject();
     auto images=(o["type"].toString()=="playlist"?o:album)["images"].toArray();
     const QUrl image(images.isEmpty()?QString():images.first().toObject()["url"].toString());
-    const QString cover=image.scheme()=="https" && (image.host()=="i.scdn.co" || image.host().endsWith(".scdn.co")) ? image.toString() : QString();
+    // Album art comes from i.scdn.co; playlist covers (uploads, mosaics, mixes, blends) also from *.spotifycdn.com.
+    const bool spotifyImage=image.host().endsWith(".scdn.co") || image.host().endsWith(".spotifycdn.com");
+    const QString cover=image.scheme()=="https" && image.userInfo().isEmpty() && spotifyImage ? image.toString() : QString();
     return {{"cover",cover},{"album",album["name"].toString()},{"duration",o["duration_ms"].toInt()}, {"id",o["id"].toString()},{"name",o["name"].toString("Unavailable")},{"subtitle",names.join(", ")},{"artists",names},{"uri",o["uri"].toString()},{"url",o["external_urls"].toObject()["spotify"].toString()},{"type",o["type"].toString()},{"explicit",o["explicit"].toBool()}};
 }
 void SpotifyApi::load(QString path,QString key,bool append){
@@ -237,6 +239,11 @@ void SpotifyApi::command(QString cmd){
     if(controlDevice().isEmpty()){fail("empty","Choose a Spotify device first.",true);return;}
     if(localActive()){emit localControl(cmd,0);return;}
     request(cmd=="pause"?"PUT":"POST",target("/me/player/"+cmd,{},controlDevice()),{},[this](QJsonObject){refreshSoon();},true);
+}
+void SpotifyApi::queue(QString uri){
+    if(!QRegularExpression("^spotify:track:[A-Za-z0-9]+$").match(uri).hasMatch())return;
+    if(controlDevice().isEmpty()){fail("empty","Start playback on a device first, then add songs to the queue.",true);return;}
+    request("POST",target("/me/player/queue",{{"uri",uri}},controlDevice()),{},[this](QJsonObject){announce("Added to queue.");},true);
 }
 void SpotifyApi::togglePlayback(){if(player.value("playing").toBool())command("pause");else play();}
 void SpotifyApi::seek(qint64 ms){

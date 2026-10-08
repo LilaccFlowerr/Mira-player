@@ -16,13 +16,16 @@ Button {
     topInset: 0; bottomInset: 0; leftInset: 0; rightInset: 0
     leftPadding: text.length ? 16 : 10; rightPadding: text.length ? 16 : 10; topPadding: 10; bottomPadding: 10
     hoverEnabled: true
+    // Clicking must not leave focus behind (it would block Space for play/pause); Tab still reaches the button.
+    focusPolicy: Qt.TabFocus
     opacity: enabled ? 1 : 0.38
     scale: down ? 0.96 : 1
     Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
     background: Rectangle {
         radius: control.down ? 12 : height / 2
         color: control.filled ? Theme.primary : control.selected ? Theme.container : control.hovered ? Theme.hover : control.tonal ? Theme.elevated : "transparent"
-        border.width: control.activeFocus ? 2 : 0; border.color: Theme.primary
+        // Focus ring only for keyboard navigation, not after a mouse click.
+        border.width: control.visualFocus ? 2 : 0; border.color: Theme.primary
         Behavior on color { ColorAnimation { duration: 160 } }
         Behavior on radius { NumberAnimation { duration: 160 } }
     }

@@ -4,6 +4,7 @@ import QtQuick.Layouts
 Rectangle {
     id: root
     signal configure()
+    signal expandRequested()
     radius: 28; color: Theme.elevated
     implicitHeight: 112
     readonly property var track: spotify.playback
@@ -25,16 +26,28 @@ Rectangle {
     FrameAnimation { running: !!root.track.playing && root.visible; onTriggered: root.position = spotify.position() }
     RowLayout {
         anchors.fill: parent; anchors.margins: 16; spacing: root.width < 850 ? 10 : 18
-        CoverArt { source: root.track.cover || ""; Layout.preferredWidth: 72; Layout.preferredHeight: 72; variant: 3 }
+        CoverArt {
+            source: root.track.cover || ""; Layout.preferredWidth: 72; Layout.preferredHeight: 72; variant: 3
+            scale: coverHover.hovered ? 1.04 : 1
+            Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+            HoverHandler { id: coverHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: root.expandRequested() }
+            ToolTip.visible: coverHover.hovered; ToolTip.text: "Open player (Ctrl+P)"; ToolTip.delay: 650
+        }
         ColumnLayout {
             Layout.preferredWidth: root.width > 1050 ? 235 : root.width < 850 ? 120 : 155; Layout.maximumWidth: 260; spacing: 5
-            Label { text: root.hasTrack ? root.track.name : "Nothing playing yet"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
-            Label { text: root.hasTrack ? root.track.subtitle : "Pick something to play"; color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
             Label {
-                text: root.hasTrack ? (root.track.device ? "On " + root.track.device + "  ·  Spotify ↗" : "Via Spotify  ↗") : "Play here or on a Spotify device"
-                color: Theme.primary; font.pixelSize: 10; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+                text: root.hasTrack ? root.track.name : "Nothing playing"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+                TapHandler { onTapped: root.expandRequested() }
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
-            TapHandler { onTapped: { if(root.track.url)spotify.openSpotify(root.track.url) } }
+            Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+            Label {
+                text: root.hasTrack ? (root.track.device ? root.track.device + "  ·  Spotify ↗" : "Spotify ↗") : !spotify.deviceId ? "No device selected" : ""
+                color: Theme.primary; font.pixelSize: 10; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+                TapHandler { onTapped: { if(root.track.url)spotify.openSpotify(root.track.url); else root.openDevices() } }
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+            }
         }
         ColumnLayout {
             Layout.fillWidth: true; spacing: 2

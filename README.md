@@ -102,7 +102,7 @@ Search needs no extra scope. No top-items or playlist-write scopes. Playlists ar
 
 ## Player and keyboard
 
-The progress line follows Material 3 Expressive: the played part waves while music plays and flattens when paused. Click or drag it to seek; with the line focused, ← / → seek 5 seconds. The player bar also has shuffle, repeat (off → all → one), mute and a volume slider (scroll wheel supported); choosing a different device while music plays moves playback there. Liked songs is pinned as the first card on Home and in the sidebar (Ctrl+2); it loads 50 songs at a time, has Play and Shuffle buttons and a filter field (Ctrl+F) that searches the loaded songs, and also works inside playlists. Starting a song keeps playing what comes after it: in a playlist the rest of the playlist, in Liked songs your whole Liked songs collection (Shuffle shuffles the whole collection), in search results the other results. What happens after the last song follows the Autoplay setting of your Spotify account. The track playing now is highlighted in lists, the window title shows it, and the track menu can copy its Spotify link. The window size is remembered.
+The progress line follows Material 3 Expressive: the played part waves while music plays and flattens when paused. Click or drag it to seek; with the line focused, ← / → seek 5 seconds. The player bar also has shuffle, repeat (off → all → one), mute and a volume slider (scroll wheel supported); choosing a different device while music plays moves playback there. Liked songs is pinned as the first card on Home and in the sidebar (Ctrl+2); it loads 50 songs at a time, has Play and Shuffle buttons and a filter field (Ctrl+F) that searches the loaded songs, and also works inside playlists. Starting a song keeps playing what comes after it: in a playlist the rest of the playlist, in Liked songs your whole Liked songs collection (Shuffle shuffles the whole collection), in search results the other results. What happens after the last song follows the Autoplay setting of your Spotify account. Click the cover or title in the player bar (or press Ctrl+P) for a large player view with the cover, a blurred background and all controls. Right-click a song for Play from here, Add to queue, Search artist, Save and Copy link. The track playing now is highlighted in lists, the window title shows it, and the track menu can copy its Spotify link. The window size is remembered.
 
 | Shortcut | Action |
 | --- | --- |
@@ -113,6 +113,7 @@ The progress line follows Material 3 Expressive: the played part waves while mus
 | Ctrl+M | Mute/unmute |
 | Ctrl+S / Ctrl+R | Shuffle / cycle repeat |
 | Ctrl+D | Device picker |
+| Ctrl+P | Open or close the large player view (Esc closes it) |
 | Ctrl+K | Search (Esc clears) |
 | Ctrl+F | Filter liked songs or the open playlist |
 | Ctrl+1 / Ctrl+2 / Ctrl+3 | Home / Liked songs / Settings |

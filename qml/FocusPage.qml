@@ -9,8 +9,8 @@ ScrollView {
     clip: true; contentWidth: availableWidth
     ColumnLayout {
         width: page.availableWidth; spacing: 14
-        Label { text: "Less noise.\nMore attention."; font.pixelSize: page.width < 800 ? 32 : 40; font.bold: true; lineHeight: 1.1; Layout.fillWidth: true }
-        Label { text: "Choose your intention, give yourself time and let everything else wait."; opacity: 0.7; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+        Label { text: "Focus"; font.pixelSize: page.width < 800 ? 32 : 40; font.bold: true; lineHeight: 1.1; Layout.fillWidth: true }
+        Label { text: "Pick a length and start the timer. It does not touch your music."; opacity: 0.7; wrapMode: Text.WordWrap; Layout.fillWidth: true }
         GridLayout {
             columns: page.width > 850 ? 2 : 1; Layout.fillWidth: true; columnSpacing: 20; rowSpacing: 20
             Surface {
@@ -44,14 +44,14 @@ ScrollView {
                                 font.pixelSize: 48; font.weight: Font.Medium
                                 Accessible.name: "Remaining focus time " + text
                             }
-                            Label { anchors.horizontalCenter: parent.horizontalCenter; text: focusSession.finished ? "Take a breather." : "one thing at a time"; opacity: 0.75 }
+                            Label { anchors.horizontalCenter: parent.horizontalCenter; text: focusSession.finished ? "Time is up" : "remaining"; opacity: 0.75 }
                         }
                     }
                     ProgressBar { Layout.fillWidth: true; value: 1 - focusSession.remaining / focusSession.total; Accessible.name: "Focus session progress" }
                     Flow {
                         Layout.fillWidth: true; spacing: 8
                         Button { text: focusSession.running ? "Pause focus" : focusSession.remaining < focusSession.total && !focusSession.finished ? "Continue" : "Start focus"; highlighted: true
-                            background: Rectangle { implicitWidth: 140; implicitHeight: 42; radius: 21; color: parent.enabled ? (prefs.dark ? "#c9b7fa" : "#695092") : (prefs.dark ? "#48434f" : "#ded9e3"); border.width: parent.activeFocus ? 2 : 0; border.color: prefs.dark ? "#ffffff" : "#251a36" }
+                            background: Rectangle { implicitWidth: 140; implicitHeight: 42; radius: 21; color: parent.enabled ? (prefs.dark ? "#c9b7fa" : "#695092") : (prefs.dark ? "#48434f" : "#ded9e3"); border.width: parent.visualFocus ? 2 : 0; border.color: prefs.dark ? "#ffffff" : "#251a36" }
                             contentItem: Text { text: parent.text; font: parent.font; color: prefs.dark ? "#251a36" : "#ffffff"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
  onClicked: { if(focusSession.running) focusSession.pause(); else if(focusSession.remaining < focusSession.total && !focusSession.finished) focusSession.resume(); else focusSession.start(prefs.minutes) } }
                         Button { text: "Reset"; flat: true; onClicked: focusSession.reset() }
@@ -63,7 +63,7 @@ ScrollView {
                 Layout.fillWidth: true; Layout.preferredWidth: 350; Layout.alignment: Qt.AlignTop
                 ColumnLayout {
                     anchors.fill: parent; spacing: 14
-                    Label { text: "What do you need?"; font.pixelSize: 23; font.bold: true }
+                    Label { text: "Mood"; font.pixelSize: 23; font.bold: true }
                     Label { text: "A mood for your workspace. No analysis or recommendations based on your music."; wrapMode: Text.WordWrap; opacity: 0.7; Layout.fillWidth: true }
                     Repeater {
                         model: [{name:"Calm",detail:"Slow down and stay with one task"},{name:"Bright",detail:"Fresh attention for a new idea"},{name:"Space",detail:"Think freely, without hurry"}]
@@ -85,7 +85,7 @@ ScrollView {
                         Label { text: "minutes"; opacity: 0.7 }
                     }
                     Label { text: "A new length applies from your next session."; font.pixelSize: 12; wrapMode: Text.WordWrap; opacity: 0.65; Layout.fillWidth: true }
-                    Button { text: "Choose music for this moment  →"; onClicked: page.chooseMusic(); Layout.fillWidth: true }
+                    Button { text: "Back to music  →"; onClicked: page.chooseMusic(); Layout.fillWidth: true }
                 }
             }
         }

@@ -7,7 +7,7 @@ ApplicationWindow {
     id: window
     width: 1320; height: 860; minimumWidth: 640; minimumHeight: 620
     visible: true
-    title: spotify.playback.uri ? spotify.playback.name + " · " + spotify.playback.subtitle + " — " + appName : appName + " — music, your way"
+    title: spotify.playback.uri ? spotify.playback.name + " · " + spotify.playback.subtitle + " — " + appName : appName
     Material.theme: prefs.dark ? Material.Dark : Material.Light
     Material.accent: Theme.primary; Material.primary: Theme.primary
     Material.foreground: Theme.text; Material.background: Theme.panel
@@ -102,7 +102,7 @@ ApplicationWindow {
                         delegate: ItemDelegate {
                             required property var modelData
                             width: ListView.view.width; height: 60; padding: 6
-                            background: Rectangle { radius: 14; color: parent.hovered ? Theme.elevated : "transparent"; border.width: parent.activeFocus?1:0; border.color: Theme.primary }
+                            background: Rectangle { radius: 14; color: parent.hovered ? Theme.elevated : "transparent"; border.width: parent.visualFocus?1:0; border.color: Theme.primary }
                             contentItem: RowLayout {
                                 spacing: 10
                                 CoverArt { source: modelData.cover; Layout.preferredWidth: 42; Layout.preferredHeight: 42 }
@@ -115,7 +115,7 @@ ApplicationWindow {
                             onClicked: {window.activePage=0;music.openPlaylist(modelData)}
                             Accessible.name: "Open playlist " + modelData.name
                         }
-                        Label { anchors.fill: parent; anchors.margins: 8; anchors.topMargin: 24; visible: spotify.playlistItems.length===0; text: auth.connected ? "Your playlists show up here.\nRefresh your library." : "All your playlists,\nin one place.\n\nConnect Spotify to\nsee them here."; color: Theme.muted; font.pixelSize: 12; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Label { anchors.fill: parent; anchors.margins: 8; anchors.topMargin: 24; visible: spotify.playlistItems.length===0; text: auth.connected ? "No playlists loaded.\nUse the refresh button above." : "Connect Spotify to see\nyour playlists here."; color: Theme.muted; font.pixelSize: 12; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     }
                     Item { visible: window.narrow; Layout.fillHeight: true }
                     ActionButton { text: window.narrow ? "" : "Session timer"; symbol: "timer"; hint: "Optional session timer"; Layout.fillWidth: true; onClicked: timerPopup.open() }
@@ -126,14 +126,18 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 28; color: Theme.panel; clip: true
                 StackLayout {
+                    id: pages
                     anchors.fill: parent; anchors.margins: window.width < 780 ? 18 : 28; currentIndex: window.activePage
-                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
+                    onCurrentIndexChanged: pageFade.restart()
+                    NumberAnimation { id: pageFade; target: pages; property: "opacity"; from: 0.4; to: 1; duration: 200; easing.type: Easing.OutCubic }
+                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
                     SettingsPage { }
                 }
             }
         }
-        PlayerBar { id: playerBar; Layout.fillWidth: true; onConfigure: window.activePage=1 }
+        PlayerBar { id: playerBar; Layout.fillWidth: true; onConfigure: window.activePage=1; onExpandRequested: nowPlaying.open() }
     }
+    NowPlaying { id: nowPlaying; bar: playerBar }
     Rectangle {
         id: snackbar
         property string text: ""
@@ -175,4 +179,5 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+S"; onActivated: spotify.setShuffle(!spotify.playback.shuffle) }
     Shortcut { sequence: "Ctrl+R"; onActivated: playerBar.cycleRepeat() }
     Shortcut { sequence: "Ctrl+D"; onActivated: playerBar.openDevices() }
+    Shortcut { sequence: "Ctrl+P"; onActivated: nowPlaying.opened ? nowPlaying.close() : nowPlaying.open() }
 }

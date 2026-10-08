@@ -58,3 +58,13 @@ Liked songs is pinned first on Home, loads 50 per page and has Play, Shuffle and
 ## Revision 0.4.2 — icon
 
 New app icon: a CAVA-style audio visualiser (nine bottom-aligned bars) in off-white on a neutral charcoal rounded square. Original drawing; generated as SVG and exported to PNG, ICO and ICNS. Checked at 512 px and 64 px.
+
+## Revision 0.4.3 — focus rings
+
+Buttons, cards and track rows show their focus ring only for keyboard navigation (`visualFocus`), not after a mouse click, and `ActionButton` no longer takes focus on click (`focusPolicy: Qt.TabFocus`), so Space keeps toggling playback after clicking a button. Verified: compile and offscreen start.
+Playlist covers from `*.spotifycdn.com` (uploaded covers, mosaics, mixes, blends) were rejected by the image host check and fell back to a shape; that host is now allowed alongside `*.scdn.co`. An open playlist without any cover shows a 2×2 mosaic of its first four album covers; the Material shape remains the fallback when there is no art at all. Not verified against live Spotify data.
+The indeterminate loading bar on the music page is replaced by a Material 3 Expressive loading indicator that morphs through 17 MaterialShapes (adapted from the MIT-licensed Nebula shell by the same author; Canvas shapes in software rendering). The morph itself could not be viewed here because this environment has no GPU rendering.
+
+## Revision 0.4.4 — player view and polish
+
+Large "Now playing" view (cover, blurred cover backdrop with GPU rendering, wavy progress, all controls; Ctrl+P, Esc closes). Rounded covers everywhere (MultiEffect mask; square in software rendering) decoded at display size. Fades between pages and views, hover scale on covers, right-click menu on songs with Add to queue (`POST /me/player/queue`) and Search artist. Home shows the current track or a time-of-day greeting; marketing-style copy was replaced with plain labels. Verified: compile, offscreen start of all pages, and an offscreen capture of the player view (software rendering, so without blur and rounded masks). Not verified against live Spotify.

@@ -24,6 +24,8 @@ Canvas {
         case "previous": c.beginPath();c.moveTo(19,5);c.lineTo(8,12);c.lineTo(19,19);c.closePath();c.fill();line([5,5,5,19]);break
         case "arrow": line([5,12,19,12]);line([13,6,19,12,13,18]);break
         case "back": line([15,5,8,12,15,19]);break
+        case "down": line([5,9,12,16,19,9]);break
+        case "queue": line([4,6,16,6]);line([4,12,16,12]);line([4,18,11,18]);line([18,15,18,21]);line([15,18,21,18]);break
         case "plus": line([12,5,12,19]);line([5,12,19,12]);break
         case "check": line([5,12,10,17,20,6]);break
         case "close": line([6,6,18,18]);line([18,6,6,18]);break

@@ -43,6 +43,7 @@ public:
     Q_INVOKABLE void playInContext(QString context,QString uri);
     // Play the whole Liked songs collection from a track (or shuffled), falling back to the loaded list.
     Q_INVOKABLE void playLiked(QStringList uris,int index,bool shuffle=false);
+    Q_INVOKABLE void queue(QString uri);
     Q_INVOKABLE void seek(qint64 ms);
     Q_INVOKABLE void setShuffle(bool enabled);
     Q_INVOKABLE void setRepeat(QString mode);
