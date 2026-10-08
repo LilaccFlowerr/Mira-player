@@ -6,6 +6,46 @@ An independent Qt 6 music companion for Spotify with a Material Expressive inter
 
 ![Mira — music interface](docs/screenshots/main-dark.png)
 
+## Getting started
+
+Mira talks to Spotify through your **own** free Spotify Developer app. That takes about five minutes, once. You need **Spotify Premium** to play music.
+
+### 1. Download and install
+
+Get the newest version from the [Releases page](../../releases).
+
+- **Windows:** download `mira-…-win64.exe` and run it. Windows may say the app is from an unknown publisher: click **More info → Run anyway**.
+- **macOS:** download `mira-…-Darwin.dmg`, open it and drag Mira to Applications. The first time, **right-click Mira → Open → Open**. (Built on Apple Silicon; Intel Macs are untested.)
+- **Fedora / RPM-based Linux:** download `mira-…-Linux.rpm` and run `sudo dnf install ./mira-…-Linux.rpm`. Other distributions: see [building](#building-and-running-locally).
+
+The app is not code-signed, which is why your system warns you. That is expected for a hobby project.
+
+### 2. Create your own Spotify Client ID
+
+1. Go to https://developer.spotify.com/dashboard and log in with your Spotify account. Accept the developer terms if asked.
+2. Click **Create app** and fill in:
+   - **App name:** anything, for example `My Mira`
+   - **App description:** anything, for example `Personal music player`
+   - **Redirect URIs:** exactly `http://127.0.0.1:43821/callback`, then click **Add**. Use `127.0.0.1`, not `localhost`.
+   - **Which API/SDKs are you planning to use?** tick **Web API** and **Web Playback SDK**
+3. Agree to the terms and click **Save**.
+4. Open your new app, go to **Settings** and copy the **Client ID** (a long string of letters and numbers).
+
+You do not need the **Client secret**. Never paste it into Mira or share it.
+
+### 3. Connect Mira
+
+1. Open Mira and go to **Settings** (gear icon, or Ctrl+3).
+2. Paste your Client ID into the **Spotify Client ID** field.
+3. Click **Connect Spotify**, log in in your browser and click **Agree**. You can close the browser tab afterwards.
+4. Done. Mira starts its built-in player and becomes your active Spotify device. Pick a song or open **Liked songs**.
+
+### If something does not work
+
+- **"Spotify refused this action"**: check that you have Premium and that the redirect URI and both API checkboxes from step 2 are correct.
+- **No sound inside Mira**: the built-in player needs Widevine (protected-audio support), which not every computer has. Click the device button in the player bar and pick your normal Spotify app (phone, desktop app or speaker) instead; Mira then works as a remote control. See [built-in playback](docs/PLAYBACK.md).
+- **Port 43821 in use**: close other apps that might use it and try again.
+
 ## Building and running locally
 
 Requires: CMake >=3.24, a C++20 compiler, Ninja, Qt >=6.8 with Core/Gui/Network/Concurrent/Quick/Qml/QuickControls2/ShaderTools/WebEngineQuick/WebEngineCore/WebChannel (including Qt Positioning), plus Qt DBus on Linux. Qt is linked dynamically. M3Shapes is vendored at a pinned version, so nothing is downloaded during configure.
@@ -25,7 +65,9 @@ Windows: install Qt 6.8+ MSVC 2022 x64, Visual Studio C++ Build Tools, CMake/Nin
 
 macOS: install the Xcode command-line tools, Qt 6.8+ for macOS, CMake and Ninja; set CMAKE_PREFIX_PATH to the Qt prefix. Start `open build/mira.app`.
 
-## Setting up Spotify
+## Spotify setup details
+
+The [getting started](#getting-started) steps cover the normal setup. Technical details:
 
 1. Open https://developer.spotify.com/dashboard and create your own Developer app. This project contains no credentials.
 2. Register exactly `http://127.0.0.1:43821/callback`; do not use `localhost`.
