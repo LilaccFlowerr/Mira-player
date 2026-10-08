@@ -108,12 +108,11 @@ jobs:
             done
           fi
           ditto -c -k --keepParent stage/mira.app dist/mira-app.zip
-      - name: Corresponding Qt sources and notices
+      - name: Qt notices and Mira source
         shell: bash
         run: |
-          curl --fail --location --retry 3 "https://download.qt.io/archive/qt/6.8/${QT_VERSION}/single/qt-everywhere-src-${QT_VERSION}.tar.xz" -o "dist/qt-everywhere-src-${QT_VERSION}.tar.xz"
           if [[ -d "$QT_ROOT_DIR/licenses" ]]; then
-            tar -czf dist/qt-binary-notices.tar.gz -C "$QT_ROOT_DIR" licenses
+            tar -czf "dist/qt-binary-notices-${{ matrix.label }}.tar.gz" -C "$QT_ROOT_DIR" licenses
           fi
           git archive --format=tar.gz --output=dist/mira-source.tar.gz HEAD
       - uses: actions/upload-artifact@v4
@@ -123,6 +122,19 @@ jobs:
             dist/*.exe
             dist/*.dmg
             dist/*.zip
-            dist/*.tar.xz
             dist/*.tar.gz
+          if-no-files-found: error
+      # The corresponding Qt source (LGPL) is about 1 GB and the same for every platform,
+      # so it is fetched once and kept apart from the small app downloads.
+      - name: Corresponding Qt sources
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p qt-src
+          curl --fail --location --retry 3 "https://download.qt.io/archive/qt/6.8/${QT_VERSION}/single/qt-everywhere-src-${QT_VERSION}.tar.xz" -o "qt-src/qt-everywhere-src-${QT_VERSION}.tar.xz"
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: qt-sources
+          path: qt-src/*.tar.xz
           if-no-files-found: error
