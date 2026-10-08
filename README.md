@@ -1,3 +1,7 @@
+# BE WARNED this was a test to see how astra performs with one prompt.
+
+
+
 # Mira
 
 *Formerly called Luwte. Settings and a saved sign-in from Luwte are carried over automatically on first start.*
