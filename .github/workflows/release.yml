@@ -1,6 +1,9 @@
 name: Native desktop packages
 on:
   workflow_dispatch:
+  # Pushing a tag like v0.4.4 builds everything and publishes a GitHub Release with the installers.
+  push:
+    tags: ['v*']
 permissions:
   contents: read
 jobs:
@@ -138,3 +141,23 @@ jobs:
           name: qt-sources
           path: qt-src/*.tar.xz
           if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [rpm, desktop]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          files=$(find artifacts -type f \( -name '*.rpm' -o -name '*.exe' -o -name '*.dmg' -o -name 'qt-everywhere-src-*.tar.xz' \))
+          notes="Downloads: .exe for Windows, .dmg for macOS, .rpm for Fedora. Setup steps are in the README.
+
+          The installers include Qt (LGPL-3.0); its corresponding source is attached as qt-everywhere-src-*.tar.xz."
+          gh release create "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --title "Mira $version" --notes "$notes"
