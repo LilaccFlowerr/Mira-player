@@ -1,0 +1,13 @@
+# Dependencies and assets
+
+- Qt Core, Gui, Network, Concurrent, DBus (Linux), Qml, Quick, Quick Controls, WebChannel, WebEngine (including Chromium), Positioning: dynamically linked, LGPL-3.0 (or commercial/GPL alternatives). Qt Shader Tools is a build-time tool. License texts in `licenses/`; Qt's own bundled third-party code retains its individual licenses. No Qt Network Authorization or GPL-only application modules are linked. WebEngine includes Chromium and many separately licensed dependencies (BSD, LGPL and others); preserve the full notices and corresponding Qt/Chromium source archive from the exact build, not just this summary.
+- M3Shapes by soramanew: https://github.com/soramanew/m3shapes, commit `8a6fe8961749887d677700b6508e0c9249968b7e`, Apache-2.0. Qt >=6.8. Vendored C++/headers/shaders are unchanged; CMakeLists.txt replaced with a portable static QML module integration. Upstream source copyright headers retained. This library ports AndroidX shapes; applicable upstream notices remain in the source. Full license in `third_party/m3shapes/LICENSE`.
+- Linux uses the system `/usr/bin/secret-tool` from libsecret (LGPL-2.1-or-later); not bundled. Windows Credential Manager and macOS Security framework are operating-system APIs.
+- Own icon, layout and text: MIT. AppStream metadata: CC0-1.0. No Spotify logo, fonts, photos or music assets bundled. Spotify API content remains owned by its respective rights holders and is not covered by this repository's MIT license.
+- CI uses GitHub checkout/upload-artifact (MIT), install-qt-action (MIT), aqtinstall (MIT), Ninja (Apache-2.0) and NSIS (zlib/libpng with individual component licenses); these build tools are not linked into the application. NSIS licenses: https://nsis.sourceforge.io/License . Verify the selected versions and bundled Qt notices before publishing.
+
+Qt sources and notices must accompany public binary releases as described in `docs/RELEASE.md`. Users may replace/relink the shared Qt libraries and debug modifications; no additional restriction is imposed by this project.
+
+Caelestia Shell (GPL-3.0, https://github.com/caelestia-dots/shell) was inspected as a visual reference for the 0.2 redesign. No Caelestia source code, icons, fonts or assets are incorporated. New icons are original Canvas drawings; fallback decorative shapes are original radial paths.
+
+- Spotify Web Playback SDK is fetched at runtime from `https://sdk.scdn.co/spotify-player.js`; it is not vendored or licensed under MIT. Use is subject to Spotify Developer Terms and Policy. Our bootstrap HTML/JS is original MIT code. Widevine is proprietary, separately licensed and not bundled.

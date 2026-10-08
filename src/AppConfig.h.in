@@ -1,0 +1,8 @@
+#pragma once
+namespace AppConfig {
+inline constexpr auto name = "@APP_NAME@";
+inline constexpr auto id = "@APP_ID@";
+inline constexpr auto version = "@APP_VERSION@";
+inline constexpr auto redirect = "http://127.0.0.1:43821/callback";
+inline constexpr auto scopes = "user-read-playback-state user-modify-playback-state user-library-read user-library-modify playlist-read-private streaming user-read-email user-read-private";
+}

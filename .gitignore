@@ -1,0 +1,9 @@
+/build*/
+/dist/
+/stage/
+/.env
+CMakeUserPresets.json
+*.user
+*.p12
+*.pfx
+*.pem

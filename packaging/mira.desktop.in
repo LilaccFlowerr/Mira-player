@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=@APP_NAME@
+Comment=Material music companion for Spotify devices
+Exec=mira
+Icon=@APP_ID@
+Terminal=false
+Categories=Audio;Music;AudioVideo;
+StartupWMClass=mira

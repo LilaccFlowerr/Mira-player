@@ -1,0 +1,122 @@
+name: Native desktop packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rpm:
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    steps:
+      - name: Build dependencies
+        run: dnf install -y git gcc-c++ cmake ninja-build qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtshadertools-devel qt6-qtwebengine-devel qt6-qtwebchannel-devel libsecret rpm-build
+      - uses: actions/checkout@v4
+      - run: cmake --preset release && cmake --build --preset release --parallel 2
+      - run: cpack --config build/CPackConfig.cmake -B dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mira-linux-rpm
+          path: dist/*.rpm
+          if-no-files-found: error
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            arch: win64_msvc2022_64
+            label: windows
+          - os: macos-14
+            arch: clang_64
+            label: macos
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_VERSION: 6.8.3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: ${{ matrix.arch }}
+          modules: qtshadertools qtwebengine qtwebchannel qtpositioning
+          cache: true
+      - name: Windows build environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & "$vs\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64 -HostArch amd64
+          'PATH','INCLUDE','LIB','LIBPATH','VCToolsInstallDir','VSINSTALLDIR','WindowsSdkDir' | ForEach-Object {
+            $value = [Environment]::GetEnvironmentVariable($_)
+            if ($value) { "$_=$value" >> $env:GITHUB_ENV }
+          }
+          choco install nsis ninja -y --no-progress
+          'C:\Program Files (x86)\NSIS' >> $env:GITHUB_PATH
+      - name: Build
+        shell: bash
+        run: |
+          cmake --preset release
+          cmake --build --preset release --parallel 2
+          cmake --install build --prefix stage
+      - name: Sign Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_PFX_BASE64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: ./packaging/sign-windows.ps1 -Path stage/bin/mira.exe
+      - name: Sign and notarize macOS application
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MACOS_P12_BASE64: ${{ secrets.MACOS_P12_BASE64 }}
+          MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bash packaging/sign-macos.sh
+      - name: Package staged application
+        shell: bash
+        run: cpack --config build/CPackConfig.cmake -D CPACK_INSTALL_CMAKE_PROJECTS= -D "CPACK_INSTALLED_DIRECTORIES=$PWD/stage;/" -B dist
+      - name: Sign Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_PFX_BASE64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: Get-ChildItem dist/*.exe | ForEach-Object { ./packaging/sign-windows.ps1 -Path $_.FullName }
+      - name: Notarize DMG and archive app
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -n "$MACOS_SIGN_IDENTITY" && -n "$APPLE_ID" && -n "$APPLE_APP_PASSWORD" && -n "$APPLE_TEAM_ID" ]]; then
+            for dmg in dist/*.dmg; do
+              xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+              xcrun stapler staple "$dmg"
+            done
+          fi
+          ditto -c -k --keepParent stage/mira.app dist/mira-app.zip
+      - name: Corresponding Qt sources and notices
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 "https://download.qt.io/archive/qt/6.8/${QT_VERSION}/single/qt-everywhere-src-${QT_VERSION}.tar.xz" -o "dist/qt-everywhere-src-${QT_VERSION}.tar.xz"
+          if [[ -d "$QT_ROOT_DIR/licenses" ]]; then
+            tar -czf dist/qt-binary-notices.tar.gz -C "$QT_ROOT_DIR" licenses
+          fi
+          git archive --format=tar.gz --output=dist/mira-source.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mira-${{ matrix.label }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.zip
+            dist/*.tar.xz
+            dist/*.tar.gz
+          if-no-files-found: error
