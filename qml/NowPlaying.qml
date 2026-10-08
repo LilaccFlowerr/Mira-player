@@ -11,6 +11,7 @@ Popup {
     readonly property bool hasTrack: !!track.uri
     readonly property bool hardware: GraphicsInfo.api !== GraphicsInfo.Software
     property real position: 0
+    readonly property bool compactView: width < 600
     parent: Overlay.overlay
     x: 0; y: 0; width: parent ? parent.width : 0; height: parent ? parent.height : 0
     modal: true; focus: true; padding: 0
@@ -50,17 +51,17 @@ Popup {
             symbol: "down"; tonal: true; hint: "Close (Esc)"; onClicked: root.close()
         }
         ColumnLayout {
-            anchors.centerIn: parent
-            width: Math.min(parent.width - 64, 620)
-            spacing: 18
+            anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter
+            width: Math.min(parent.width - (root.compactView ? 32 : 64), 620)
+            spacing: root.compactView ? 14 : 18
             CoverArt {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: Math.min(root.height * 0.42, root.width - 64, 420); Layout.preferredHeight: Layout.preferredWidth
+                Layout.preferredWidth: Math.min(root.height * 0.42, root.width - 64, 420); Layout.maximumWidth: root.width - 64; Layout.preferredHeight: Layout.preferredWidth
                 source: root.track.cover || ""; variant: 3
             }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 4
-                Label { text: root.hasTrack ? root.track.name : "Nothing playing"; color: Theme.text; font.pixelSize: 28; font.bold: true; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
+                Label { text: root.hasTrack ? root.track.name : "Nothing playing"; color: Theme.text; font.pixelSize: root.compactView ? 24 : 28; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
                 Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: 16; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
                 Label { visible: !!root.track.album; text: root.track.album || ""; color: Theme.muted; font.pixelSize: 12; opacity: 0.8; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
             }
@@ -82,7 +83,7 @@ Popup {
                 }
             }
             RowLayout {
-                Layout.alignment: Qt.AlignHCenter; spacing: 14
+                Layout.alignment: Qt.AlignHCenter; spacing: root.compactView ? 6 : 14
                 ActionButton { symbol: "shuffle"; selected: !!root.track.shuffle; hint: "Shuffle (Ctrl+S)"; enabled: root.bar.available && root.hasTrack && !root.restrictions.toggling_shuffle; onClicked: spotify.setShuffle(!root.track.shuffle) }
                 ActionButton { symbol: "previous"; hint: "Previous (Ctrl+←)"; enabled: root.bar.available && !root.track.restricted && !root.restrictions.skipping_prev; onClicked: spotify.command("previous") }
                 ActionButton { symbol: root.track.playing ? "pause" : "play"; filled: true; implicitWidth: 76; implicitHeight: 60; hint: root.track.playing ? "Pause (Space)" : "Play (Space)"; enabled: root.bar.available && !root.track.restricted; onClicked: spotify.togglePlayback() }
@@ -90,11 +91,11 @@ Popup {
                 ActionButton { symbol: root.track.repeat==="track" ? "repeatOne" : "repeat"; selected: !!root.track.repeat && root.track.repeat!=="off"; hint: "Repeat (Ctrl+R)"; enabled: root.bar.available && root.hasTrack; onClicked: root.bar.cycleRepeat() }
             }
             RowLayout {
-                Layout.alignment: Qt.AlignHCenter; spacing: 8
+                Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
                 ActionButton { symbol: (root.track.volume||0)===0 && root.hasTrack ? "mute" : "volume"; compact: true; hint: "Mute (Ctrl+M)"; enabled: root.bar.volumeAvailable; onClicked: root.bar.toggleMute() }
                 Slider {
                     id: volume
-                    Layout.preferredWidth: 220; from: 0; to: 100; stepSize: 1; wheelEnabled: true
+                    Layout.fillWidth: true; Layout.minimumWidth: 0; from: 0; to: 100; stepSize: 1; wheelEnabled: true
                     value: root.track.volume || 0; enabled: root.bar.volumeAvailable
                     onMoved: commit.restart()
                     Timer { id: commit; interval: 150; onTriggered: spotify.setVolume(Math.round(volume.value)) }
