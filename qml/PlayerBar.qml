@@ -8,7 +8,7 @@ Rectangle {
     // Phone layout: one row with cover, title, play/pause and next; the rest lives in the large player view.
     property bool compact: false
     radius: compact ? 20 : 28; color: Theme.elevated
-    implicitHeight: compact ? 76 : 112
+    implicitHeight: compact ? 90 : 112
     readonly property var track: spotify.playback
     readonly property var restrictions: track.disallows || ({})
     readonly property bool available: auth.connected && !!spotify.deviceId
@@ -28,7 +28,7 @@ Rectangle {
     FrameAnimation { running: !!root.track.playing && root.visible; onTriggered: root.position = spotify.position() }
     RowLayout {
         visible: root.compact
-        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 6; anchors.topMargin: 8; anchors.bottomMargin: 14; spacing: 10
+        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 6; anchors.topMargin: 8; anchors.bottomMargin: 26; spacing: 10
         CoverArt { source: root.track.cover || ""; Layout.preferredWidth: 52; Layout.preferredHeight: 52; variant: 3 }
         ColumnLayout {
             Layout.fillWidth: true; spacing: 2
@@ -47,7 +47,7 @@ Rectangle {
     WavyProgress {
         visible: root.compact
         anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-        anchors.leftMargin: 14; anchors.rightMargin: 14; anchors.bottomMargin: 2; height: 14
+        anchors.leftMargin: 14; anchors.rightMargin: 14; anchors.bottomMargin: 4; height: 16
         position: root.position; duration: root.track.duration || 0; playing: !!root.track.playing
     }
     RowLayout {
