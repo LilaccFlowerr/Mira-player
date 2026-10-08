@@ -153,15 +153,23 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # Android builds need a desktop Qt of the same version for host tools (moc, qsb, androiddeployqt),
+      # including Shader Tools for the M3Shapes shaders. Installed first so QT_ROOT_DIR ends up on Android.
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: qtshadertools
+          cache: true
+      # No host: for Qt >= 6.7 the action picks "all_os", where Qt publishes its Android packages.
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
           target: android
           arch: android_arm64_v8a
           modules: qtshadertools
-          # Android builds need a desktop Qt of the same version for host tools (moc, qsb, androiddeployqt).
-          autodesktop: true
           cache: true
       - name: Android NDK and Ninja
         run: |
