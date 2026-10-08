@@ -19,7 +19,13 @@ Mira talks to Spotify through your **own** free Spotify Developer app. That take
 Get the newest version from the [Releases page](../../releases).
 
 - **Windows:** download `mira-…-win64.exe` and run it. Windows may say the app is from an unknown publisher: click **More info → Run anyway**.
-- **macOS:** download `mira-…-Darwin.dmg`, open it and drag Mira to Applications. The first time, **right-click Mira → Open → Open**. (Built on Apple Silicon; Intel Macs are untested.)
+- **macOS:** download `mira-…-Darwin.dmg`, open it and drag Mira to Applications. The first time, **right-click Mira → Open → Open**; on newer macOS versions go to **System Settings → Privacy & Security** and click **Open Anyway**. If macOS says Mira "is damaged and can't be opened", run this once in Terminal, then open it again:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/mira.app
+  ```
+
+  (Built on Apple Silicon; Intel Macs are untested.)
 - **Fedora / RPM-based Linux:** download `mira-…-Linux.rpm` and run `sudo dnf install ./mira-…-Linux.rpm`. Other distributions: see [building](#building-and-running-locally).
 
 The app is not code-signed, which is why your system warns you. That is expected for a hobby project.

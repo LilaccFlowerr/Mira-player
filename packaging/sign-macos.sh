@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ -z "${MACOS_P12_BASE64:-}" || -z "${MACOS_SIGN_IDENTITY:-}" ]]; then
-  echo 'Unsigned development build'
+  # No Developer ID: sign ad hoc. Deployment rewrites the binaries and breaks the linker's
+  # signature, which Apple Silicon reports as "damaged". An ad-hoc signature fixes that;
+  # Gatekeeper then shows the normal "unidentified developer" prompt instead.
+  echo 'Unsigned development build (ad-hoc signature)'
+  codesign --force --deep --sign - stage/mira.app
+  codesign --verify --deep --strict stage/mira.app
   exit 0
 fi
 keychain="${RUNNER_TEMP:-/tmp}/mira-sign.keychain-db"
