@@ -34,7 +34,7 @@ Rectangle {
             Layout.fillWidth: true; spacing: 2
             Label { text: root.hasTrack ? root.track.name : "Nothing playing"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
             Label {
-                text: root.hasTrack ? root.track.subtitle : !spotify.deviceId ? "Tap the device button to pick a device" : "Choose a song to start"
+                text: root.hasTrack ? root.track.subtitle : !spotify.deviceId && Qt.platform.os === "android" ? "Pick a song: Mira opens Spotify for you" : !spotify.deviceId ? "Tap the device button to pick a device" : "Choose a song to start"
                 color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
             }
         }
@@ -136,13 +136,17 @@ Rectangle {
     Popup {
         id: devicesPopup
         parent: Overlay.overlay
-        x: Math.max(12,parent.width-width-24); y: Math.max(12,parent.height-height-root.height-24)
-        width: Math.min(360,parent.width-32); padding: 22
+        // On phones a full-width sheet at the bottom; on desktop a card above the player bar.
+        x: root.compact ? 8 : Math.max(12,parent.width-width-24)
+        y: root.compact ? parent.height-height-8 : Math.max(12,parent.height-height-root.height-24)
+        width: root.compact ? parent.width-16 : Math.min(360,parent.width-32); padding: root.compact ? 18 : 22
+        modal: root.compact; dim: root.compact
         background: Rectangle { color: Theme.elevated; radius: 24; border.color: Theme.outline }
         contentItem: ColumnLayout {
             spacing: 14
-            Label { text: "Where do you want to listen?"; font.pixelSize: 20; font.bold: true; color: Theme.text }
-            Label { text: localPlayer.status; color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Label { text: "Where do you want to listen?"; font.pixelSize: root.compact ? 18 : 20; font.bold: true; color: Theme.text; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Label { visible: Qt.platform.os !== "android"; text: localPlayer.status; color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            ActionButton { visible: Qt.platform.os === "android"; text: "Open Spotify on this phone"; symbol: "external"; filled: true; Layout.fillWidth: true; enabled: auth.connected; onClicked: spotify.openSpotifyApp() }
             ActionButton { visible: Qt.platform.os !== "android"; text: localPlayer.ready ? "Stop local player" : localPlayer.busy ? "Connecting player…" : "Listen on this computer"; symbol: "play"; filled: true; Layout.fillWidth: true; enabled: auth.connected && !localPlayer.busy; onClicked: localPlayer.ready ? localPlayer.stop() : localPlayer.start() }
             ComboBox {
                 Layout.fillWidth: true; model: spotify.devices; textRole: "name"; valueRole: "id"

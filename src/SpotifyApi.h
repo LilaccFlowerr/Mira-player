@@ -44,6 +44,8 @@ public:
     // Play the whole Liked songs collection from a track (or shuffled), falling back to the loaded list.
     Q_INVOKABLE void playLiked(QStringList uris,int index,bool shuffle=false);
     Q_INVOKABLE void queue(QString uri);
+    // Android: start the Spotify app so this phone shows up as a playback device.
+    Q_INVOKABLE void openSpotifyApp();
     Q_INVOKABLE void seek(qint64 ms);
     Q_INVOKABLE void setShuffle(bool enabled);
     Q_INVOKABLE void setRepeat(QString mode);
@@ -80,5 +82,8 @@ private:
     bool localActive()const;
     void startPlayback(QJsonObject body);
     void activateLocal();
+    // Returns true when there is no device yet and the request was deferred (Android) or refused.
+    bool needDevice(std::function<void()> retry);
+    std::function<void()> pendingPlay; QTimer pendingExpiry;
     static QVariantMap item(QJsonObject object);
 };

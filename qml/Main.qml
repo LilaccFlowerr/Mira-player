@@ -28,6 +28,10 @@ ApplicationWindow {
         return false
     }
     onClosing: close => { if(Qt.platform.os==="android" && goBack())close.accepted=false }
+    // Android's status and navigation bars follow the app background instead of Qt's default blue.
+    readonly property color barColor: Theme.base
+    onBarColorChanged: systemBars.apply(Theme.base, prefs.dark)
+    Component.onCompleted: systemBars.apply(Theme.base, prefs.dark)
     property bool initialized: false
     property bool devicesRequested: false
     // Space toggles playback unless the user is typing or moved to a control with the keyboard,

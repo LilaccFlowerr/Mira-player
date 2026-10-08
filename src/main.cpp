@@ -13,6 +13,7 @@
 #include "SpotifyApi.h"
 #include "FocusSession.h"
 #include "WebPlayback.h"
+#include "SystemBars.h"
 #ifndef Q_OS_ANDROID
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 #endif
@@ -54,6 +55,7 @@ int main(int argc,char **argv){
     parser.addOption({"audio-check", "Check local Widevine/AAC support without contacting Spotify, then exit."});
     parser.addOption({"compact", "Open at the minimum supported window size."});
     parser.addOption({"phone", "Open at a phone-sized window (412x892) to preview the mobile layout."});
+    parser.addOption({"size", "Open at a given window size for previews, for example 360x780.", "WxH"});
     parser.process(app);
     Preferences prefs;OAuth auth(&prefs,nullptr,!parser.isSet("audio-check"));SpotifyApi spotify(&auth);WebPlayback localPlayer(&auth);FocusSession focus;
     QObject::connect(&localPlayer,&WebPlayback::localRequested,&spotify,&SpotifyApi::prepareLocalPlayback);
@@ -74,6 +76,8 @@ int main(int argc,char **argv){
     engine.rootContext()->setContextProperty("spotify",&spotify);
     engine.rootContext()->setContextProperty("localPlayer",&localPlayer);
     engine.rootContext()->setContextProperty("focusSession",&focus);
+    SystemBars systemBars;
+    engine.rootContext()->setContextProperty("systemBars",&systemBars);
     engine.rootContext()->setContextProperty("appName",AppConfig::name);
     engine.rootContext()->setContextProperty("appVersion",AppConfig::version);
     QObject::connect(&engine,&QQmlApplicationEngine::objectCreationFailed,&app,[]{QCoreApplication::exit(1);},Qt::QueuedConnection);
@@ -82,6 +86,7 @@ int main(int argc,char **argv){
         auto *window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
         if(window && parser.isSet("compact"))window->resize(640,680);
         if(window && parser.isSet("phone"))window->resize(412,892);
+        if(window && parser.isSet("size")){const auto wh=parser.value("size").split('x');if(wh.size()==2)window->resize(wh[0].toInt(),wh[1].toInt());}
 #ifdef MIRA_MPRIS
         if(window && !parser.isSet("capture")){
             auto *mpris=new Mpris(&spotify,&app);

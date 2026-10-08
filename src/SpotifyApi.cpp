@@ -18,11 +18,19 @@ SpotifyApi::SpotifyApi(OAuth *a,QObject *p):QObject(p),auth(a){
         if(active || (remote && ++pollTicks%3==0)) refreshPlayer(false);
     });
     poll.start();
+    pendingExpiry.setSingleShot(true);
+    connect(&pendingExpiry,&QTimer::timeout,this,[this]{pendingPlay={};});
+#ifdef Q_OS_ANDROID
+    // Coming back from the Spotify app (or anything else): look again for this phone as a device.
+    connect(qGuiApp,&QGuiApplication::applicationStateChanged,this,[this](Qt::ApplicationState state){
+        if(state==Qt::ApplicationActive && auth->connected())refreshPlayer(true);
+    });
+#endif
     trackEnd.setSingleShot(true);
     connect(&trackEnd,&QTimer::timeout,this,[this]{if(auth->connected())refreshPlayer(false);});
     connect(auth,&OAuth::disconnected,this,[this]{
         ++generation;for(auto *reply:network.findChildren<QNetworkReply*>())reply->abort();
-        rows.clear();deviceRows.clear();playlistRows.clear();userId.clear();publish({});next.clear();selectedDevice.clear();localDevice.clear();
+        rows.clear();deviceRows.clear();playlistRows.clear();userId.clear();pendingPlay={};publish({});next.clear();selectedDevice.clear();localDevice.clear();
         preferLocal=false;loading=false;status="idle";info="Spotify is disconnected.";emit contentChanged();emit changed();
     });
 }
@@ -161,7 +169,7 @@ void SpotifyApi::refreshPlayer(bool includeDevices){
         if(!includeDevices)return;
         request("GET","/me/player/devices",{},[this](QJsonObject d){
             deviceRows.clear();bool found=false;
-            for(const auto &v:d["devices"].toArray()){auto o=v.toObject();if(o["is_restricted"].toBool()||o["id"].toString().isEmpty())continue;auto id=o["id"].toString();deviceRows.append(QVariantMap{{"id",id},{"name",o["name"].toString()},{"supportsVolume",o["supports_volume"].toBool()},{"volume",o["volume_percent"].toInt()}});if(id==selectedDevice)found=true;}
+            for(const auto &v:d["devices"].toArray()){auto o=v.toObject();if(o["is_restricted"].toBool()||o["id"].toString().isEmpty())continue;auto id=o["id"].toString();deviceRows.append(QVariantMap{{"id",id},{"name",o["name"].toString()},{"type",o["type"].toString()},{"active",o["is_active"].toBool()},{"supportsVolume",o["supports_volume"].toBool()},{"volume",o["volume_percent"].toInt()}});if(id==selectedDevice)found=true;}
             if(!localDevice.isEmpty()) {
                 bool listed=false;for(auto &row:deviceRows)if(row.toMap()["id"].toString()==localDevice){auto device=row.toMap();device["supportsVolume"]=true;device["name"]="This computer · built-in player";row=device;listed=true;}
                 if(!listed)deviceRows.prepend(QVariantMap{{"id",localDevice},{"name","This computer · built-in player"},{"supportsVolume",true}});
@@ -169,20 +177,48 @@ void SpotifyApi::refreshPlayer(bool includeDevices){
             }
             // Prefer the device that is actually playing over the first one in the list.
             const QString active=player.value("deviceId").toString();
-            if(!found)selectedDevice=preferLocal||deviceRows.isEmpty()?QString():std::any_of(deviceRows.cbegin(),deviceRows.cend(),[&](const QVariant &v){return v.toMap()["id"].toString()==active;})?active:deviceRows.first().toMap()["id"].toString();
+            if(!found){
+#ifdef Q_OS_ANDROID
+                // On a phone, play on the phone: pick its Spotify app (the active one if there are several).
+                // Without it, leave the choice empty so Play opens the Spotify app instead of a speaker or laptop.
+                selectedDevice.clear();
+                for(const auto &v:deviceRows){const auto d=v.toMap();if(d["type"].toString().compare("Smartphone",Qt::CaseInsensitive)==0){selectedDevice=d["id"].toString();if(d["active"].toBool())break;}}
+#else
+                selectedDevice=preferLocal||deviceRows.isEmpty()?QString():std::any_of(deviceRows.cbegin(),deviceRows.cend(),[&](const QVariant &v){return v.toMap()["id"].toString()==active;})?active:deviceRows.first().toMap()["id"].toString();
+#endif
+            }
             info=deviceRows.isEmpty()?"Start the built-in player or open Spotify on another device.":"Devices updated. Choose where you want to listen.";
             emit changed();
+            if(pendingPlay && !selectedDevice.isEmpty()){pendingExpiry.stop();const auto run=std::exchange(pendingPlay,{});run();}
         },true);
     },true);
+}
+bool SpotifyApi::needDevice(std::function<void()> retry){
+    if(!selectedDevice.isEmpty())return false;
+#ifdef Q_OS_ANDROID
+    // Spotify on this phone is not a device yet: wake it, and play as soon as it shows up (within a minute).
+    pendingPlay=std::move(retry);pendingExpiry.start(60000);
+    announce("Opening Spotify on this phone. Switch back to Mira and your music starts.");
+    openSpotifyApp();
+#else
+    Q_UNUSED(retry);
+    fail("empty","Choose a device first with the device button.",true);
+#endif
+    return true;
+}
+void SpotifyApi::openSpotifyApp(){
+    QDesktopServices::openUrl(QUrl("spotify:"));
+    const int g=generation;
+    for(int ms:{4000,9000})QTimer::singleShot(ms,this,[this,g]{if(g==generation && auth->connected())refreshPlayer(true);});
 }
 QString SpotifyApi::controlDevice()const{const auto active=player.value("deviceId").toString();return active.isEmpty()?selectedDevice:active;}
 bool SpotifyApi::localActive()const{return !localDevice.isEmpty() && controlDevice()==localDevice;}
 void SpotifyApi::startPlayback(QJsonObject body){
-    if(selectedDevice.isEmpty()){fail("empty","Choose a device first with the device button.",true);return;}
+    if(needDevice([this,body]{startPlayback(body);}))return;
     request("PUT",target("/me/player/play"),body,[this](QJsonObject){refreshSoon();},true);
 }
 void SpotifyApi::play(QString uri){
-    if(selectedDevice.isEmpty()){fail("empty","Choose a device first with the device button.",true);return;}
+    if(needDevice([this,uri]{play(uri);}))return;
     if(uri.isEmpty() && !allowed("resuming")){fail("error","Spotify does not allow resuming right now.",true);return;}
     // The SDK can only resume what it already plays; otherwise the Web API moves playback to this device.
     if(uri.isEmpty() && localActive() && selectedDevice==localDevice){emit localControl("resume",0);return;}
@@ -203,7 +239,7 @@ void SpotifyApi::playFrom(QStringList uris,int index){
     startPlayback({{"uris",QJsonArray::fromStringList(valid)},{"offset",QJsonObject{{"position",offset}}}});
 }
 void SpotifyApi::playLiked(QStringList uris,int index,bool shuffle){
-    if(selectedDevice.isEmpty()){fail("empty","Choose a device first with the device button.",true);return;}
+    if(needDevice([this,uris,index,shuffle]{playLiked(uris,index,shuffle);}))return;
     auto fallback=[this,uris,index,shuffle]{
         QStringList list=uris;
         if(shuffle)std::shuffle(list.begin(),list.end(),*QRandomGenerator::global());

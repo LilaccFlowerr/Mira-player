@@ -51,7 +51,7 @@ You do not need the **Client secret**. Never paste it into Mira or share it.
 3. Click **Connect Spotify**, log in in your browser and click **Agree**. You can close the browser tab afterwards.
 4. Done. Mira starts its built-in player and becomes your active Spotify device. Pick a song or open **Liked songs**.
 
-On Android, after you tap **Agree** in the browser, switch back to Mira to finish connecting. To play on your phone, open the Spotify app once so it shows up as a device, then pick it with the device button.
+On Android, after you tap **Agree** in the browser, switch back to Mira to finish connecting. Mira plays on your phone automatically: it picks the Spotify app on the phone as the device, and if Spotify is not running yet, tapping a song opens it. Switch back to Mira and the song starts.
 
 ### If something does not work
 

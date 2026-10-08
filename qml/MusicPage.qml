@@ -16,6 +16,8 @@ ScrollView {
     readonly property bool trackList: mode===1 || mode===2 || mode===4
     // Phone-sized page: fewer columns and smaller decorations.
     readonly property bool compact: width < 600
+    // On Android, Play also works without a device yet: Mira then opens the Spotify app on the phone.
+    readonly property bool canPlay: !!spotify.deviceId || Qt.platform.os === "android"
     property string filter: ""
     // Songs shown in track lists after the local filter; only loaded songs are searched.
     readonly property var shown: {
@@ -136,10 +138,10 @@ ScrollView {
                 columns: page.compact ? 3 : 4
                 ActionButton {
                     symbol: "play"; text: "Play"; filled: true
-                    enabled: auth.connected && !!spotify.deviceId && (page.mode===4 || page.shown.length>0)
+                    enabled: auth.connected && page.canPlay && (page.mode===4 || page.shown.length>0)
                     onClicked: page.mode===4 ? spotify.play(page.selectedPlaylist.uri) : spotify.playLiked(page.shown.map(e=>e.uri), 0)
                 }
-                ActionButton { visible: page.mode===2; symbol: "shuffle"; text: "Shuffle"; tonal: true; enabled: auth.connected && !!spotify.deviceId && page.shown.length>0; onClicked: spotify.playLiked(page.shown.map(e=>e.uri), 0, true) }
+                ActionButton { visible: page.mode===2; symbol: "shuffle"; text: "Shuffle"; tonal: true; enabled: auth.connected && page.canPlay && page.shown.length>0; onClicked: spotify.playLiked(page.shown.map(e=>e.uri), 0, true) }
                 ActionButton { visible: page.mode===4; symbol: "external"; text: "Open in Spotify"; tonal: true; onClicked: spotify.openSpotify(page.selectedPlaylist.url) }
                 Item { Layout.fillWidth: true }
                 Rectangle {
@@ -247,7 +249,7 @@ ScrollView {
                             Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                         }
                         MouseArea { id: coverArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: page.openPlaylist(modelData) }
-                        ActionButton { anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8; symbol: "play"; filled: true; hint: "Play " + modelData.name; enabled: !!spotify.deviceId; onClicked: spotify.play(modelData.uri) }
+                        ActionButton { anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8; symbol: "play"; filled: true; hint: "Play " + modelData.name; enabled: page.canPlay; onClicked: spotify.play(modelData.uri) }
                     }
                     Button {
                         text: modelData.name; Layout.fillWidth: true; implicitHeight: 24; padding: 0
@@ -284,7 +286,7 @@ ScrollView {
                             text: trackRow.hovered || trackRow.current ? "" : String(trackRow.index+1)
                             symbol: trackRow.hovered ? (trackRow.current && spotify.playback.playing ? "pause" : "play") : trackRow.current ? "bars" : ""
                             ink: trackRow.current ? Theme.primary : Theme.text
-                            implicitWidth: 30; compact: true; hint: (trackRow.current && spotify.playback.playing ? "Pause " : "Play ") + modelData.name; enabled: !!spotify.deviceId
+                            implicitWidth: 30; compact: true; hint: (trackRow.current && spotify.playback.playing ? "Pause " : "Play ") + modelData.name; enabled: page.canPlay
                             onClicked: trackRow.current ? spotify.togglePlayback() : page.playRow(trackRow.index)
                         }
                         CoverArt { source: modelData.cover; Layout.preferredWidth: 46; Layout.preferredHeight: 46 }
@@ -298,14 +300,14 @@ ScrollView {
                         ActionButton { visible: !page.compact; symbol: "plus"; hint: "Save to Spotify"; compact: true; onClicked: spotify.save(modelData.uri) }
                         ActionButton { symbol: "more"; hint: "More actions for " + modelData.name; compact: true; onClicked: trackMenu.popup() }
                     }
-                    onDoubleClicked: {if(spotify.deviceId)page.playRow(trackRow.index)}
+                    onDoubleClicked: {if(page.canPlay)page.playRow(trackRow.index)}
                     TapHandler { acceptedButtons: Qt.RightButton; onTapped: trackMenu.popup() }
                     Menu {
                         id: trackMenu
                         MenuItem { text: "Open in Spotify ↗"; onTriggered: spotify.openSpotify(modelData.url) }
-                        MenuItem { text: "Play from here"; enabled: !!spotify.deviceId; onTriggered: page.playRow(trackRow.index) }
-                        MenuItem { text: "Play only this song"; enabled: !!spotify.deviceId; onTriggered: spotify.play(modelData.uri) }
-                        MenuItem { text: "Add to queue"; enabled: !!spotify.deviceId; onTriggered: spotify.queue(modelData.uri) }
+                        MenuItem { text: "Play from here"; enabled: page.canPlay; onTriggered: page.playRow(trackRow.index) }
+                        MenuItem { text: "Play only this song"; enabled: page.canPlay; onTriggered: spotify.play(modelData.uri) }
+                        MenuItem { text: "Add to queue"; enabled: page.canPlay; onTriggered: spotify.queue(modelData.uri) }
                         MenuItem { text: "Search artist"; enabled: !!(modelData.artists && modelData.artists.length); onTriggered: page.searchRequested(modelData.artists[0]) }
                         MenuSeparator {}
                         MenuItem { text: "Save to library"; onTriggered: spotify.save(modelData.uri) }
