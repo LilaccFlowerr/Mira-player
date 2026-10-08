@@ -5,8 +5,10 @@ Rectangle {
     id: root
     signal configure()
     signal expandRequested()
-    radius: 28; color: Theme.elevated
-    implicitHeight: 112
+    // Phone layout: one row with cover, title, play/pause and next; the rest lives in the large player view.
+    property bool compact: false
+    radius: compact ? 20 : 28; color: Theme.elevated
+    implicitHeight: compact ? 76 : 112
     readonly property var track: spotify.playback
     readonly property var restrictions: track.disallows || ({})
     readonly property bool available: auth.connected && !!spotify.deviceId
@@ -25,6 +27,31 @@ Rectangle {
     Connections { target: spotify; function onPlaybackChanged() { root.position = spotify.position() } }
     FrameAnimation { running: !!root.track.playing && root.visible; onTriggered: root.position = spotify.position() }
     RowLayout {
+        visible: root.compact
+        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 6; anchors.topMargin: 8; anchors.bottomMargin: 14; spacing: 10
+        CoverArt { source: root.track.cover || ""; Layout.preferredWidth: 52; Layout.preferredHeight: 52; variant: 3 }
+        ColumnLayout {
+            Layout.fillWidth: true; spacing: 2
+            Label { text: root.hasTrack ? root.track.name : "Nothing playing"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+            Label {
+                text: root.hasTrack ? root.track.subtitle : !spotify.deviceId ? "Tap the device button to pick a device" : "Choose a song to start"
+                color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+            }
+        }
+        ActionButton { visible: !root.hasTrack; symbol: "device"; hint: "Choose playback device"; onClicked: root.openDevices() }
+        ActionButton { visible: root.hasTrack; symbol: root.track.playing ? "pause" : "play"; filled: true; hint: root.track.playing ? "Pause" : "Play"; enabled: root.available && !root.track.restricted; onClicked: spotify.togglePlayback() }
+        ActionButton { visible: root.hasTrack; symbol: "next"; hint: "Next track"; enabled: root.available && !root.track.restricted && !root.restrictions.skipping_next; onClicked: spotify.command("next") }
+    }
+    // Tapping the compact player (outside its buttons) opens the large player view.
+    TapHandler { enabled: root.compact; onTapped: root.expandRequested() }
+    WavyProgress {
+        visible: root.compact
+        anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+        anchors.leftMargin: 14; anchors.rightMargin: 14; anchors.bottomMargin: 2; height: 14
+        position: root.position; duration: root.track.duration || 0; playing: !!root.track.playing
+    }
+    RowLayout {
+        visible: !root.compact
         anchors.fill: parent; anchors.margins: 16; spacing: root.width < 850 ? 10 : 18
         CoverArt {
             source: root.track.cover || ""; Layout.preferredWidth: 72; Layout.preferredHeight: 72; variant: 3
@@ -116,7 +143,7 @@ Rectangle {
             spacing: 14
             Label { text: "Where do you want to listen?"; font.pixelSize: 20; font.bold: true; color: Theme.text }
             Label { text: localPlayer.status; color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-            ActionButton { text: localPlayer.ready ? "Stop local player" : localPlayer.busy ? "Connecting player…" : "Listen on this computer"; symbol: "play"; filled: true; Layout.fillWidth: true; enabled: auth.connected && !localPlayer.busy; onClicked: localPlayer.ready ? localPlayer.stop() : localPlayer.start() }
+            ActionButton { visible: Qt.platform.os !== "android"; text: localPlayer.ready ? "Stop local player" : localPlayer.busy ? "Connecting player…" : "Listen on this computer"; symbol: "play"; filled: true; Layout.fillWidth: true; enabled: auth.connected && !localPlayer.busy; onClicked: localPlayer.ready ? localPlayer.stop() : localPlayer.start() }
             ComboBox {
                 Layout.fillWidth: true; model: spotify.devices; textRole: "name"; valueRole: "id"
                 currentIndex: spotify.devices.findIndex(d=>d.id===spotify.deviceId)

@@ -13,7 +13,9 @@
 #include "SpotifyApi.h"
 #include "FocusSession.h"
 #include "WebPlayback.h"
+#ifndef Q_OS_ANDROID
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
+#endif
 #ifdef MIRA_MPRIS
 #include "Mpris.h"
 #endif
@@ -26,7 +28,9 @@ int main(int argc,char **argv){
         qputenv("QTWEBENGINE_CHROMIUM_FLAGS",chromiumFlags.trimmed().toUtf8());
     }
 #endif
+#ifndef Q_OS_ANDROID
     QtWebEngineQuick::initialize();
+#endif
     QGuiApplication app(argc,argv);
     app.setOrganizationName("Mira");app.setOrganizationDomain(AppConfig::id);
     app.setApplicationName(AppConfig::name);app.setApplicationVersion(AppConfig::version);
@@ -49,6 +53,7 @@ int main(int argc,char **argv){
     parser.addOption({"page", "Initial page for a local UI preview: 0, 1 or 2.", "index", "0"});
     parser.addOption({"audio-check", "Check local Widevine/AAC support without contacting Spotify, then exit."});
     parser.addOption({"compact", "Open at the minimum supported window size."});
+    parser.addOption({"phone", "Open at a phone-sized window (412x892) to preview the mobile layout."});
     parser.process(app);
     Preferences prefs;OAuth auth(&prefs,nullptr,!parser.isSet("audio-check"));SpotifyApi spotify(&auth);WebPlayback localPlayer(&auth);FocusSession focus;
     QObject::connect(&localPlayer,&WebPlayback::localRequested,&spotify,&SpotifyApi::prepareLocalPlayback);
@@ -76,6 +81,7 @@ int main(int argc,char **argv){
     if(!engine.rootObjects().isEmpty()) {
         auto *window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());
         if(window && parser.isSet("compact"))window->resize(640,680);
+        if(window && parser.isSet("phone"))window->resize(412,892);
 #ifdef MIRA_MPRIS
         if(window && !parser.isSet("capture")){
             auto *mpris=new Mpris(&spotify,&app);

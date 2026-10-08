@@ -7,3 +7,6 @@ CMakeUserPresets.json
 *.p12
 *.pfx
 *.pem
+*.jks
+*.keystore
+/build-android/

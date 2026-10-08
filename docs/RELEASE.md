@@ -1,5 +1,7 @@
 # Releases
 
+Pushing a tag such as `v0.5.0` runs every job and publishes a GitHub Release with the .rpm, .exe, .dmg, Android .apk and the corresponding Qt source. The Android job signs with the `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets (key alias `mira`); without them it uses a throwaway key, so users must uninstall before installing the next build.
+
 Native builds: Windows on windows-2022 (MSVC), macOS on macos-14 (Clang), RPM in a Fedora container on a Linux runner. The workflow runs manually; it uploads CI artefacts and does not publish a GitHub Release. Version/name: `cmake/AppIdentity.cmake`. No cross-compilation, no test suites.
 
 ## Unsigned development builds

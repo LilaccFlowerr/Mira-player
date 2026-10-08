@@ -3,9 +3,17 @@ import QtQuick.Controls
 import QtQuick.Layouts
 ScrollView {
     id: page; clip: true; contentWidth: availableWidth
+    property bool phone: false
+    readonly property bool android: Qt.platform.os === "android"
+    signal timerRequested()
     ColumnLayout {
         width: page.availableWidth; spacing: 18
-        Label { text: "Settings"; font.pixelSize: 30; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+        RowLayout {
+            Layout.fillWidth: true
+            Label { text: "Settings"; font.pixelSize: page.phone ? 26 : 30; font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            // The sidebar with the timer is hidden on phones, so the timer is reachable from here.
+            ActionButton { visible: page.phone; text: "Session timer"; symbol: "timer"; tonal: true; onClicked: page.timerRequested() }
+        }
         Surface {
             Layout.fillWidth: true
             ColumnLayout {
@@ -35,6 +43,7 @@ ScrollView {
                 TextField { id: client; text: prefs.clientId; Layout.fillWidth: true; placeholderText: "Spotify Client ID (no client secret)"; enabled: !auth.connected && !auth.busy; selectByMouse: true; Accessible.name: "Spotify Client ID"; onEditingFinished: prefs.clientId = text }
                 Label { text: "SPOTIFY_CLIENT_ID takes precedence over this field. The Client ID is public; never enter a client secret."; Layout.fillWidth: true; wrapMode: Text.WordWrap; font.pixelSize: 12; opacity: 0.7 }
                 Label { text: auth.status; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+                Label { visible: page.android; text: "After you tap Agree in the browser, switch back to Mira to finish connecting."; color: Theme.primary; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                 Flow {
                     Layout.fillWidth: true; spacing: 8
                     Button { text: "Connect Spotify"; highlighted: true
@@ -48,6 +57,7 @@ ScrollView {
             }
         }
         Surface {
+            visible: !page.android
             Layout.fillWidth: true
             ColumnLayout {
                 anchors.fill: parent; spacing: 12
@@ -89,7 +99,7 @@ ScrollView {
                     Button { text: "Spotify Developer Policy ↗"; flat: true; onClicked: Qt.openUrlExternally("https://developer.spotify.com/policy") }
                     Button { text: "Qt licences ↗"; flat: true; onClicked: Qt.openUrlExternally("https://doc.qt.io/qt-6/licensing.html") }
                 }
-                Label { text: "Keyboard: Tab / Shift+Tab moves between controls; Enter or Space activates them. Space (outside a control) plays or pauses. Ctrl+← / Ctrl+→ previous/next track · Shift+← / Shift+→ seek 10 s · Ctrl+↑ / Ctrl+↓ volume · Ctrl+M mute · Ctrl+S shuffle · Ctrl+R repeat · Ctrl+D devices · Ctrl+P large player · Ctrl+K search (Esc clears) · Ctrl+F filter liked songs/playlist · Ctrl+1 Home · Ctrl+2 Liked songs · Ctrl+3 Settings. With the progress bar focused, ← / → seek 5 s."; Layout.fillWidth: true; wrapMode: Text.WordWrap; font.pixelSize: 12; opacity: 0.65 }
+                Label { visible: !page.android; text: "Keyboard: Tab / Shift+Tab moves between controls; Enter or Space activates them. Space (outside a control) plays or pauses. Ctrl+← / Ctrl+→ previous/next track · Shift+← / Shift+→ seek 10 s · Ctrl+↑ / Ctrl+↓ volume · Ctrl+M mute · Ctrl+S shuffle · Ctrl+R repeat · Ctrl+D devices · Ctrl+P large player · Ctrl+K search (Esc clears) · Ctrl+F filter liked songs/playlist · Ctrl+1 Home · Ctrl+2 Liked songs · Ctrl+3 Settings. With the progress bar focused, ← / → seek 5 s."; Layout.fillWidth: true; wrapMode: Text.WordWrap; font.pixelSize: 12; opacity: 0.65 }
             }
         }
     }

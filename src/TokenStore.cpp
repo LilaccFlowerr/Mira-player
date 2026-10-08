@@ -3,6 +3,8 @@
 #include <QtConcurrent>
 #include <QFutureWatcher>
 #include <QProcess>
+#include <QSettings>
+#include <QStandardPaths>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <wincred.h>
@@ -48,6 +50,15 @@ Result vault(int op, const QString &service, const QString &account, const QByte
     }
     CFRelease(query); CFRelease(user); CFRelease(serviceRef);
     return {status==errSecSuccess || (op!=1 && status==errSecItemNotFound),result};
+#elif defined(Q_OS_ANDROID)
+    // Android has no Secret Service. The token lives in the app's private data directory, which
+    // other apps cannot read (Android sandbox). Moving it into the Android Keystore is a follow-up.
+    QSettings store(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)+"/tokens.ini",QSettings::IniFormat);
+    const QString key=QString(service).replace('/','_')+"/"+account;
+    if(op==0) return {true,store.value(key).toByteArray()};
+    if(op==1) store.setValue(key,token); else store.remove(key);
+    store.sync();
+    return {store.status()==QSettings::NoError,{}};
 #else
     // libsecret's maintained CLI talks to Secret Service (GNOME Keyring/KWallet).
     // Secret goes through stdin, never through argv, shell, files or diagnostics.

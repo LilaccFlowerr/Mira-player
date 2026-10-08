@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import QtCore
 ApplicationWindow {
     id: window
-    width: 1320; height: 860; minimumWidth: 640; minimumHeight: 620
+    width: 1320; height: 860; minimumWidth: 360; minimumHeight: 560
     visible: true
     title: spotify.playback.uri ? spotify.playback.name + " · " + spotify.playback.subtitle + " — " + appName : appName
     Material.theme: prefs.dark ? Material.Dark : Material.Light
@@ -16,6 +16,18 @@ ApplicationWindow {
     font.pixelSize: 14
     property int activePage: initialPage === 2 ? 1 : 0
     property bool narrow: width < 980
+    // Phone layout: bottom navigation instead of the sidebar, compact player. Always on Android.
+    readonly property bool phone: Qt.platform.os === "android" || width < 600
+    readonly property string navKey: activePage===1 ? "settings" : music.mode===1 ? "search" : music.mode===2 ? "liked" : (music.mode===3||music.mode===4) ? "playlists" : "home"
+    // Android's back button: step back through the app before leaving it.
+    function goBack() {
+        if(nowPlaying.opened){nowPlaying.close();return true}
+        if(activePage===1){activePage=0;return true}
+        if(music.mode===4){navigate(3);return true}
+        if(music.mode!==0){navigate(0);return true}
+        return false
+    }
+    onClosing: close => { if(Qt.platform.os==="android" && goBack())close.accepted=false }
     property bool initialized: false
     property bool devicesRequested: false
     // Space toggles playback unless the user is typing or moved to a control with the keyboard,
@@ -50,19 +62,19 @@ ApplicationWindow {
         function onNotify(text) { snackbar.show(text) }
     }
     ColumnLayout {
-        anchors.fill: parent; anchors.margins: 14; spacing: 12
+        anchors.fill: parent; anchors.margins: window.phone ? 8 : 14; spacing: window.phone ? 8 : 12
         RowLayout {
-            Layout.fillWidth: true; Layout.preferredHeight: 56; spacing: 16
+            Layout.fillWidth: true; Layout.preferredHeight: window.phone ? 48 : 56; spacing: window.phone ? 8 : 16
             RowLayout {
-                Layout.preferredWidth: window.narrow ? 66 : 220; spacing: 10
-                Image { source: "qrc:/assets/mira.png"; Layout.preferredWidth: 40; Layout.preferredHeight: 40 }
+                Layout.preferredWidth: window.phone ? 40 : window.narrow ? 66 : 220; spacing: 10
+                Image { source: "qrc:/assets/mira.png"; Layout.preferredWidth: window.phone ? 36 : 40; Layout.preferredHeight: Layout.preferredWidth }
                 Label { visible: !window.narrow; text: appName.toLowerCase(); font.pixelSize: 27; font.bold: true; font.letterSpacing: -1; color: Theme.text }
             }
             Rectangle {
-                Layout.fillWidth: true; Layout.maximumWidth: 620; Layout.preferredHeight: 48; radius: 24; color: Theme.elevated
+                Layout.fillWidth: true; Layout.maximumWidth: 620; Layout.preferredHeight: window.phone ? 44 : 48; radius: height/2; color: Theme.elevated
                 border.width: search.activeFocus ? 2 : 0; border.color: Theme.primary
                 RowLayout {
-                    anchors.fill: parent; anchors.leftMargin: 17; anchors.rightMargin: 10; spacing: 12
+                    anchors.fill: parent; anchors.leftMargin: window.phone ? 14 : 17; anchors.rightMargin: window.phone ? 4 : 10; spacing: window.phone ? 8 : 12
                     Icon { name: "search"; color: Theme.muted }
                     TextField {
                         id: search; Layout.fillWidth: true; placeholderText: window.width < 780 ? "Search music" : "What do you want to listen to?"; color: Theme.text; placeholderTextColor: Theme.muted
@@ -77,12 +89,13 @@ ApplicationWindow {
                 }
             }
             Item { Layout.fillWidth: true; visible: window.width > 1000 }
-            ActionButton { symbol: prefs.dark ? "sun" : "moon"; hint: "Light or dark theme"; onClicked: prefs.dark=!prefs.dark }
-            ActionButton { text: window.width > 800 ? (auth.connected ? "Connected" : "Connect") : ""; symbol: auth.connected ? "check" : "plus"; tonal: auth.connected; filled: !auth.connected; hint: "Set up the Spotify connection"; onClicked: window.activePage=1 }
+            ActionButton { visible: !window.phone; symbol: prefs.dark ? "sun" : "moon"; hint: "Light or dark theme"; onClicked: prefs.dark=!prefs.dark }
+            ActionButton { visible: !window.phone || !auth.connected; text: window.width > 800 ? (auth.connected ? "Connected" : "Connect") : ""; symbol: auth.connected ? "check" : "plus"; tonal: auth.connected; filled: !auth.connected; hint: "Set up the Spotify connection"; onClicked: window.activePage=1 }
         }
         RowLayout {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
             Rectangle {
+                visible: !window.phone
                 Layout.preferredWidth: window.narrow ? 68 : 224; Layout.fillHeight: true; radius: 24; color: Theme.panel
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 12; spacing: 6
@@ -124,18 +137,30 @@ ApplicationWindow {
                 }
             }
             Rectangle {
-                Layout.fillWidth: true; Layout.fillHeight: true; radius: 28; color: Theme.panel; clip: true
+                Layout.fillWidth: true; Layout.fillHeight: true; radius: window.phone ? 20 : 28; color: Theme.panel; clip: true
                 StackLayout {
                     id: pages
-                    anchors.fill: parent; anchors.margins: window.width < 780 ? 18 : 28; currentIndex: window.activePage
+                    anchors.fill: parent; anchors.margins: window.phone ? 14 : window.width < 780 ? 18 : 28; currentIndex: window.activePage
                     onCurrentIndexChanged: pageFade.restart()
                     NumberAnimation { id: pageFade; target: pages; property: "opacity"; from: 0.4; to: 1; duration: 200; easing.type: Easing.OutCubic }
                     MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
-                    SettingsPage { }
+                    SettingsPage { phone: window.phone; onTimerRequested: timerPopup.open() }
                 }
             }
         }
-        PlayerBar { id: playerBar; Layout.fillWidth: true; onConfigure: window.activePage=1; onExpandRequested: nowPlaying.open() }
+        PlayerBar { id: playerBar; Layout.fillWidth: true; compact: window.phone; onConfigure: window.activePage=1; onExpandRequested: nowPlaying.open() }
+        NavigationBar {
+            id: navBar
+            visible: window.phone; Layout.fillWidth: true
+            current: window.navKey
+            onActivated: key => {
+                if(key==="home")window.navigate(0)
+                else if(key==="search"){window.navigate(1);search.forceActiveFocus()}
+                else if(key==="liked")window.navigate(2)
+                else if(key==="playlists")window.navigate(3)
+                else window.activePage=1
+            }
+        }
     }
     NowPlaying { id: nowPlaying; bar: playerBar }
     Rectangle {
@@ -143,7 +168,8 @@ ApplicationWindow {
         property string text: ""
         function show(message) { text=message; opacity=1; hideTimer.restart() }
         parent: Overlay.overlay; z: 10
-        anchors.horizontalCenter: parent.horizontalCenter; y: parent.height - playerBar.height - height - 36
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: parent.height - playerBar.height - (window.phone ? navBar.height + 8 : 0) - height - 36
         width: Math.min(560, parent.width - 48); height: snackLabel.implicitHeight + 28; radius: 14
         color: prefs.dark ? "#e6e0e9" : "#322f35"
         opacity: 0; visible: opacity > 0
@@ -155,7 +181,7 @@ ApplicationWindow {
     }
     Popup {
         id: timerPopup; parent: Overlay.overlay; anchors.centerIn: parent
-        width: Math.min(920,parent.width-32); height: Math.min(700,parent.height-32); modal: true; padding: 24
+        width: Math.min(920,parent.width-(window.phone?16:32)); height: Math.min(700,parent.height-(window.phone?16:32)); modal: true; padding: window.phone ? 14 : 24
         background: Rectangle { radius: 28; color: Theme.panel; border.color: Theme.outline }
         ColumnLayout {
             anchors.fill: parent
