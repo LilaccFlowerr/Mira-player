@@ -12,7 +12,7 @@ ApplicationWindow {
     Material.accent: Theme.primary; Material.primary: Theme.primary
     Material.foreground: Theme.text; Material.background: Theme.panel
     color: Theme.base
-    font.family: Qt.platform.os === "windows" ? "Segoe UI" : "Noto Sans"
+    font.family: Qt.platform.os === "windows" ? "Segoe UI" : Qt.platform.os === "android" ? "Roboto" : "Noto Sans"
     font.pixelSize: 14
     property int activePage: initialPage === 2 ? 1 : 0
     property bool narrow: width < 980
@@ -82,7 +82,7 @@ ApplicationWindow {
                     Icon { name: "search"; color: Theme.muted }
                     TextField {
                         id: search; Layout.fillWidth: true; placeholderText: window.width < 780 ? "Search music" : "What do you want to listen to?"; color: Theme.text; placeholderTextColor: Theme.muted
-                        selectByMouse: true; background: Item {} leftPadding: 0; rightPadding: 0
+                        selectByMouse: true; background: Item {} leftPadding: 0; rightPadding: 0; topPadding: 0; bottomPadding: 0; verticalAlignment: TextInput.AlignVCenter; Layout.alignment: Qt.AlignVCenter
                         onAccepted: {if(text.trim().length)window.searchFor(text.trim())}
                         Keys.onEscapePressed: { if(text.length)text=""; else focus=false }
                         Accessible.name: "Search music on Spotify"
