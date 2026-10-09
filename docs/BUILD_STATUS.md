@@ -83,3 +83,7 @@ Also in 0.5.1: Android's status and navigation bars take the app's background co
 ## Revision 0.5.2 — phone layout fixes
 
 Compact player bar: 90 px high with the wavy line below the cover and title instead of overlapping them. Home: playlist cards use uniform column widths and top alignment, and the title no longer widens its column (long names elide instead of overlapping the neighbour). Large player view: the volume row fills the width instead of a fixed 220 px, so nothing overflows or shifts right on a phone; smaller title and spacing under 600 px. Search field text is vertically centred; Android uses Roboto so system font fallback covers emoji and CJK. Not rendered or tested here (no Qt in this environment); check on the phone.
+
+## Revision 0.5.3 — tap to play
+
+Phone track lists: one tap on a song plays it, the three-dots button (or a long press on the row) opens the menu, anchored under the button; the dots button is wider for easier tapping. Desktop keeps double click to play. Not rendered or tested here (no Qt in this environment); check on the phone.
