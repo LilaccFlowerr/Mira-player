@@ -235,4 +235,10 @@ jobs:
           notes="Downloads: .exe for Windows, .dmg for macOS, .rpm for Fedora, .apk for Android (arm64). Setup steps are in the README.
 
           The installers include Qt (LGPL-3.0); its corresponding source is attached as qt-everywhere-src-*.tar.xz."
-          gh release create "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --title "Mira $version" --notes "$notes"
+          # A release may already exist (for example when it was drafted on GitHub first): then attach the files to it.
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Mira $version" --notes "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" $files --repo "$GITHUB_REPOSITORY" --title "Mira $version" --notes "$notes"
+          fi

@@ -300,11 +300,11 @@ ScrollView {
                         ActionButton { visible: !page.compact; symbol: "plus"; hint: "Save to Spotify"; compact: true; onClicked: spotify.save(modelData.uri) }
                         ActionButton { id: moreButton; symbol: "more"; hint: "More actions for " + modelData.name; compact: true; implicitWidth: 44; onClicked: trackMenu.popup(moreButton, 0, moreButton.height) }
                     }
-                    // Phone: one tap on the song plays it, the three dots (or a long press) open the menu. Desktop: double click.
+                    // Phone: one tap on the song plays it, only the three dots open the menu. Desktop: double click.
                     onClicked: {if(page.compact && page.canPlay)page.playRow(trackRow.index)}
                     onDoubleClicked: {if(!page.compact && page.canPlay)page.playRow(trackRow.index)}
-                    onPressAndHold: trackMenu.popup(moreButton, 0, moreButton.height)
-                    TapHandler { acceptedButtons: Qt.RightButton; onTapped: trackMenu.popup() }
+                    // Right click opens the menu on desktop only: on a touch screen Qt reports a tap as a click here too.
+                    TapHandler { enabled: !page.compact; acceptedButtons: Qt.RightButton; onTapped: trackMenu.popup() }
                     Menu {
                         id: trackMenu
                         MenuItem { text: "Open in Spotify ↗"; onTriggered: spotify.openSpotify(modelData.url) }
