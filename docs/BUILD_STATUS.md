@@ -87,3 +87,7 @@ Compact player bar: 90 px high with the wavy line below the cover and title inst
 ## Revision 0.5.3 — tap to play
 
 Phone track lists: one tap on a song plays it, the three-dots button (or a long press on the row) opens the menu, anchored under the button; the dots button is wider for easier tapping. Desktop keeps double click to play. Not rendered or tested here (no Qt in this environment); check on the phone.
+
+## Revision 0.5.4 — menu only from the three dots
+
+On the phone the song menu opened when tapping a song title, because the right-click handler on the row also fires for a touch tap. That handler is now desktop-only and the long-press menu is removed: on the phone only the three-dots button opens the menu, and tapping the song just plays it. The release workflow now attaches the installers to an existing release instead of failing when the release was created on GitHub first. Not rendered or tested here (no Qt in this environment); check on the phone.
