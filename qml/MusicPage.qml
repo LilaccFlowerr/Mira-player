@@ -298,9 +298,12 @@ ScrollView {
                         Label { text: modelData.album; color: Theme.muted; Layout.preferredWidth: page.width*0.22; elide: Text.ElideRight; visible: page.width>800; font.pixelSize: 12; textFormat: Text.PlainText }
                         Label { visible: !page.compact; text: page.duration(modelData.duration); color: Theme.muted; font.pixelSize: 11; Layout.preferredWidth: 38 }
                         ActionButton { visible: !page.compact; symbol: "plus"; hint: "Save to Spotify"; compact: true; onClicked: spotify.save(modelData.uri) }
-                        ActionButton { symbol: "more"; hint: "More actions for " + modelData.name; compact: true; onClicked: trackMenu.popup() }
+                        ActionButton { id: moreButton; symbol: "more"; hint: "More actions for " + modelData.name; compact: true; implicitWidth: 44; onClicked: trackMenu.popup(moreButton, 0, moreButton.height) }
                     }
-                    onDoubleClicked: {if(page.canPlay)page.playRow(trackRow.index)}
+                    // Phone: one tap on the song plays it, the three dots (or a long press) open the menu. Desktop: double click.
+                    onClicked: {if(page.compact && page.canPlay)page.playRow(trackRow.index)}
+                    onDoubleClicked: {if(!page.compact && page.canPlay)page.playRow(trackRow.index)}
+                    onPressAndHold: trackMenu.popup(moreButton, 0, moreButton.height)
                     TapHandler { acceptedButtons: Qt.RightButton; onTapped: trackMenu.popup() }
                     Menu {
                         id: trackMenu
