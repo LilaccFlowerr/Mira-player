@@ -43,22 +43,4 @@ elseif(APPLE)
   target_sources(mira PRIVATE assets/mira.icns)
 endif()
 set_target_properties(mira PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "${APP_NAME}" MACOSX_BUNDLE_GUI_IDENTIFIER "${APP_ID}" MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}" MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}" MACOSX_BUNDLE_ICON_FILE mira.icns)
-if(ANDROID)
-  # 0.4.4 -> 404: must increase with every release so Android accepts the update.
-  math(EXPR APP_VERSION_CODE "${PROJECT_VERSION_MAJOR} * 10000 + ${PROJECT_VERSION_MINOR} * 100 + ${PROJECT_VERSION_PATCH}")
-  set_target_properties(mira PROPERTIES
-    QT_ANDROID_PACKAGE_NAME "${APP_ID}"
-    QT_ANDROID_VERSION_NAME "${APP_VERSION}"
-    QT_ANDROID_VERSION_CODE "${APP_VERSION_CODE}"
-    QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-  # Qt's HTTPS on Android needs OpenSSL in the APK. KDAB's prebuilt libraries, pinned to one commit.
-  include(FetchContent)
-  FetchContent_Declare(android_openssl
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/KDAB/android_openssl/archive/b71f1470962019bd89534a2919f5925f93bc5779.zip)
-  FetchContent_MakeAvailable(android_openssl)
-  include(${android_openssl_SOURCE_DIR}/android_openssl.cmake)
-  add_android_openssl_libraries(mira)
-else()
-  include(cmake/Packaging.cmake)
-endif()
+include(cmake/Packaging.cmake)

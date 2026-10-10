@@ -1,12 +1,12 @@
 # BE WARNED this was a test to see how astra performs with one prompt.
 
-
-
 # Mira
 
 *Formerly called Luwte. Settings and a saved sign-in from Luwte are carried over automatically on first start.*
 
 An independent Qt 6 music companion for Spotify with a Material Expressive interface: library sidebar, global search bar, playlist cards, compact track lists with album art and a fixed player bar with a wavy progress line. Rounded panels, tonal colours and shapes are visually inspired by Caelestia Shell, without using its code. Three accent palettes, light/dark themes and keyboard control; the sidebar collapses into a compact navigation rail in small windows. The session timer is optional and lives in the sidebar. The working name and version are set in `cmake/AppIdentity.cmake` (`-DAPP_NAME=...` overrides the visible name).
+
+> **On Android?** The phone version is its own app, written in Kotlin: [Mira for Android](https://github.com/LilaccFlowerr/Mira-Android).
 
 ![Mira — music interface](docs/screenshots/main-dark.png)
 
@@ -26,7 +26,6 @@ Get the newest version from the [Releases page](../../releases).
   ```
 
   (Built on Apple Silicon; Intel Macs are untested.)
-- **Android (phone):** download `mira-…-android-arm64.apk` on your phone and open it. Android asks to allow installing apps from your browser: allow it once. Also install the **Spotify app** and log in; on Android Mira controls Spotify on your phone (or another device) and the Spotify app plays the sound. If an update refuses to install, uninstall Mira first and install the new APK.
 - **Fedora / RPM-based Linux:** download `mira-…-Linux.rpm` and run `sudo dnf install ./mira-…-Linux.rpm`. Other distributions: see [building](#building-and-running-locally).
 
 The app is not code-signed, which is why your system warns you. That is expected for a hobby project.
@@ -50,8 +49,6 @@ You do not need the **Client secret**. Never paste it into Mira or share it.
 2. Paste your Client ID into the **Spotify Client ID** field.
 3. Click **Connect Spotify**, log in in your browser and click **Agree**. You can close the browser tab afterwards.
 4. Done. Mira starts its built-in player and becomes your active Spotify device. Pick a song or open **Liked songs**.
-
-On Android, after you tap **Agree** in the browser, switch back to Mira to finish connecting. Mira plays on your phone automatically: it picks the Spotify app on the phone as the device, and if Spotify is not running yet, tapping a song opens it. Switch back to Mira and the song starts.
 
 ### If something does not work
 
