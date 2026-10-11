@@ -130,6 +130,7 @@ Popup {
                     Accessible.name: "Volume"
                 }
                 ActionButton { symbol: "lyrics"; compact: true; visible: prefs.lyrics; selected: root.showLyrics; hint: root.showLyrics ? "Show the cover" : "Show lyrics"; enabled: root.hasTrack; onClicked: root.showLyrics = !root.showLyrics }
+                ActionButton { symbol: "queue"; compact: true; hint: "Reset queue: play on from this song in order"; enabled: root.bar.available && root.hasTrack; onClicked: spotify.resetQueue() }
                 ActionButton { symbol: "info"; compact: true; hint: "About this song"; enabled: root.hasTrack && (root.track.uri || "").startsWith("spotify:track:"); onClicked: { root.close(); root.infoRequested(root.track) } }
                 ActionButton { symbol: "plus"; compact: true; hint: "Save to your library"; enabled: root.bar.available && (root.track.uri || "").startsWith("spotify:track:"); onClicked: spotify.save(root.track.uri) }
                 ActionButton { symbol: "device"; compact: true; hint: "Devices (Ctrl+D)"; onClicked: { root.close(); root.bar.openDevices() } }

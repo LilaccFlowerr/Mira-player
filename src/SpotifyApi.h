@@ -42,6 +42,8 @@ public:
     Q_INVOKABLE void setVolume(int percent); Q_INVOKABLE void play(QString uri=QString());
     Q_INVOKABLE void command(QString command); Q_INVOKABLE void save(QString uri,bool remove=false);
     Q_INVOKABLE void togglePlayback();
+    // Starts the current playlist/album again from this song so the upcoming queue is rebuilt in order.
+    Q_INVOKABLE void resetQueue();
     // Play a list (liked songs, search results) starting at index, so the following tracks keep playing.
     Q_INVOKABLE void playFrom(QStringList uris,int index);
     // Play a playlist starting at one of its tracks.
@@ -90,6 +92,8 @@ private:
     QString controlDevice()const;
     bool localActive()const;
     void startPlayback(QJsonObject body);
+    void rememberPlayback(const QJsonObject &body);
+    QString lastContext; QStringList lastUris;
     void activateLocal();
     // Returns true when there is no device yet and the request was deferred (Android) or refused.
     bool needDevice(std::function<void()> retry);

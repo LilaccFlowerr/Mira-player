@@ -128,6 +128,7 @@ Rectangle {
                 Accessible.name: "Volume"
                 ToolTip.visible: hovered || pressed; ToolTip.text: Math.round(value) + "%"; ToolTip.delay: pressed ? 0 : 650
             }
+            ActionButton { symbol: "queue"; hint: "Reset queue: play on from this song in order"; visible: root.hasTrack && root.width > 900; enabled: root.available; onClicked: spotify.resetQueue() }
             ActionButton { symbol: "plus"; hint: "Save track"; visible: root.width > 1000; enabled: root.available && (root.track.uri || "").startsWith("spotify:track:"); onClicked: spotify.save(root.track.uri) }
             ActionButton { id: deviceButton; symbol: "device"; hint: "Choose playback device (Ctrl+D)"; selected: devicesPopup.opened; onClicked: root.openDevices() }
             ActionButton { symbol: "refresh"; hint: "Refresh playback status"; visible: root.width > 1180; enabled: auth.connected; onClicked: spotify.refreshPlayer() }

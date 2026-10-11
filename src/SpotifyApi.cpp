@@ -172,6 +172,7 @@ void SpotifyApi::refreshPlayer(bool includeDevices){
             state["disallows"]=o["actions"].toObject()["disallows"].toObject().toVariantMap();
             state["shuffle"]=o["shuffle_state"].toBool();
             state["repeat"]=o["repeat_state"].toString("off");
+            state["contextUri"]=o["context"].toObject()["uri"].toString();
             publish(state);
         }
         if(!includeDevices)return;
@@ -221,7 +222,14 @@ void SpotifyApi::openSpotifyApp(){
 }
 QString SpotifyApi::controlDevice()const{const auto active=player.value("deviceId").toString();return active.isEmpty()?selectedDevice:active;}
 bool SpotifyApi::localActive()const{return !localDevice.isEmpty() && controlDevice()==localDevice;}
+void SpotifyApi::rememberPlayback(const QJsonObject &body){
+    // Spotify does not always report what a song was started from, so Mira keeps its own record for resetQueue().
+    lastContext=body["context_uri"].toString();
+    lastUris.clear();
+    for(const auto &v:body["uris"].toArray())lastUris<<v.toString();
+}
 void SpotifyApi::startPlayback(QJsonObject body){
+    rememberPlayback(body);
     if(needDevice([this,body]{startPlayback(body);}))return;
     request("PUT",target("/me/player/play"),body,[this](QJsonObject){refreshSoon();},true);
 }
@@ -259,7 +267,7 @@ void SpotifyApi::playLiked(QStringList uris,int index,bool shuffle){
         const QString uri=uris.value(index);
         if(!shuffle && QRegularExpression("^spotify:track:[A-Za-z0-9]+$").match(uri).hasMatch())b["offset"]=QJsonObject{{"uri",uri}};
         const QString device=selectedDevice;
-        auto play=[this,b,device,fallback]{request("PUT",target("/me/player/play",{},device),b,[this](QJsonObject){refreshSoon();},true,false,fallback);};
+        auto play=[this,b,device,fallback]{rememberPlayback(b);request("PUT",target("/me/player/play",{},device),b,[this](QJsonObject){refreshSoon();},true,false,fallback);};
         // Shuffle has to be set before starting so the first song is random too. It fails harmlessly when nothing is active yet.
         if(shuffle)request("PUT",target("/me/player/shuffle",{{"state","true"}},device),{},[play](QJsonObject){play();},true,false,play);
         else play();
@@ -359,6 +367,7 @@ void SpotifyApi::updateLocalPlayback(QJsonObject state){
     next["restricted"]=false;next["disallows"]=state["disallows"].toObject().toVariantMap();
     next["shuffle"]=state["shuffle"].toBool();
     next["repeat"]=QStringList{"off","context","track"}.value(state["repeat_mode"].toInt(),"off");
+    next["contextUri"]=state["context"].toObject()["uri"].toString();
     publish(next);
 }
 void SpotifyApi::activateLocal(){
@@ -404,4 +413,34 @@ void SpotifyApi::pauseForExit(){
     connect(&limit,&QTimer::timeout,&loop,&QEventLoop::quit);
     request("PUT",target("/me/player/pause",{},controlDevice()),{},[&loop](QJsonObject){loop.quit();},true);
     limit.start(2000);loop.exec();
+}
+void SpotifyApi::resetQueue(){
+    // The Web API cannot remove queued songs. Starting the current playlist/album again at this song and position
+    // rebuilds what comes next from scratch, in order, which fixes a queue left scrambled by shuffle.
+    const QString uri=player.value("uri").toString();
+    const QString device=controlDevice();
+    if(uri.isEmpty() || device.isEmpty()){fail("empty","Start playback first, then reset the queue.",true);return;}
+    static const QRegularExpression contexts("^spotify:(playlist:[A-Za-z0-9]+|album:[A-Za-z0-9]+|user:[A-Za-z0-9._-]+:collection)$");
+    // What Spotify reports comes first, then what Mira started itself, then the list Mira started.
+    QString context=player.value("contextUri").toString();
+    if(!contexts.match(context).hasMatch())context=lastContext;
+    const bool hasContext=contexts.match(context).hasMatch();
+    const bool hasList=!hasContext && lastUris.contains(uri);
+    QJsonObject body{{"position_ms",qint64(position())}};
+    if(hasContext){body["context_uri"]=context;body["offset"]=QJsonObject{{"uri",uri}};}
+    else if(hasList){
+        QStringList list=lastUris;
+        const int at=list.indexOf(uri);
+        if(list.size()>100)list=list.mid(at,100);
+        body["uris"]=QJsonArray::fromStringList(list);body["offset"]=QJsonObject{{"uri",uri}};
+    }
+    else body["uris"]=QJsonArray{uri};
+    // "In order" also means shuffle off, otherwise the rebuilt queue would be shuffled again. Then restart the list.
+    const QString note=hasContext||hasList?"Queue reset: the next songs follow in order.":"Queue reset, but Mira does not know which list this song came from, so Spotify picks what comes after it.";
+    request("PUT",target("/me/player/shuffle",{{"state","false"}},device),{},[this,device,body,note](QJsonObject){
+        request("PUT",target("/me/player/play",{},device),body,[this,note](QJsonObject){announce(note);refreshSoon();},true);
+    },true,false,[this,device,body,note]{
+        // Shuffle could not be changed (restricted); restart the list anyway.
+        request("PUT",target("/me/player/play",{},device),body,[this,note](QJsonObject){announce(note);refreshSoon();},true);
+    });
 }
