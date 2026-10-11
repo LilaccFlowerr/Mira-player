@@ -22,7 +22,7 @@ Button {
     scale: down ? 0.96 : 1
     Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
     background: Rectangle {
-        radius: control.down ? 12 : height / 2
+        radius: control.down ? Theme.r(12) : height / 2
         color: control.filled ? Theme.primary : control.selected ? Theme.container : control.hovered ? Theme.hover : control.tonal ? Theme.elevated : "transparent"
         // Focus ring only for keyboard navigation, not after a mouse click.
         border.width: control.visualFocus ? 2 : 0; border.color: Theme.primary

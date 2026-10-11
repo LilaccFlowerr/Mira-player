@@ -118,6 +118,13 @@ The progress line follows Material 3 Expressive: the played part waves while mus
 | Ctrl+F | Filter liked songs or the open playlist |
 | Ctrl+1 / Ctrl+2 / Ctrl+3 | Home / Liked songs / Settings |
 
+## Lyrics, song info and appearance
+
+- **Lyrics:** press the lyrics button in the large player (Ctrl+P). Synced lyrics follow the music and a click on a line jumps there; songs without timing show plain text. They come from [LRCLIB](https://lrclib.net), which receives the song, artist and album name and the song length. Switch it off in Settings and nothing is sent.
+- **About this song** (song menu or the info button in the large player): album, year and more songs by the artist; play the album or open it in Spotify. Search results also show matching artists above the songs.
+- **Recent searches:** your last eight searches appear on the Search page; Clear removes them.
+- **Appearance (Settings):** nine themes (Lavender, Sage, Peach, Ocean, Rose, Amber, Crimson, Forest, Graphite) in light and dark, true black for the dark theme, corner roundness (sharp, default, extra round), font (default, serif, monospace) and text size. The large player has a blurred cover as background with two slow shapes that only move while music plays; switch it off in Settings. Mouse-wheel scrolling glides smoothly everywhere. "Pause music on another device when Mira closes" is optional too.
+
 ## Desktop media controls (Linux)
 
 On Linux Mira registers an MPRIS 2 player (`org.mpris.MediaPlayer2.mira`) on the session bus. KDE Plasma's media widget, GNOME's media controls, lock screens, `playerctl` and hardware media keys show the current title, artists, album and cover, and can play/pause, skip, seek, change volume, shuffle and repeat. "Raise" brings the Mira window to the front. This works for the built-in player and for remote Spotify devices. Chromium's own media-session integration is disabled inside the embedded player so only one entry appears. Windows (SMTC) and macOS (Now Playing) integrations are not implemented yet.

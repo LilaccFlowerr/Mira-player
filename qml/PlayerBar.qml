@@ -7,7 +7,7 @@ Rectangle {
     signal expandRequested()
     // Phone layout: one row with cover, title, play/pause and next; the rest lives in the large player view.
     property bool compact: false
-    radius: compact ? 20 : 28; color: Theme.elevated
+    radius: Theme.r(compact ? 20 : 28); color: Theme.elevated
     implicitHeight: compact ? 90 : 112
     readonly property var track: spotify.playback
     readonly property var restrictions: track.disallows || ({})
@@ -35,7 +35,7 @@ Rectangle {
             Label { text: root.hasTrack ? root.track.name : "Nothing playing"; font.bold: true; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
             Label {
                 text: root.hasTrack ? root.track.subtitle : !spotify.deviceId && Qt.platform.os === "android" ? "Pick a song: Mira opens Spotify for you" : !spotify.deviceId ? "Tap the device button to pick a device" : "Choose a song to start"
-                color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+                color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
             }
         }
         ActionButton { visible: !root.hasTrack; symbol: "device"; hint: "Choose playback device"; onClicked: root.openDevices() }
@@ -68,10 +68,10 @@ Rectangle {
                 TapHandler { onTapped: root.expandRequested() }
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
-            Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: 12; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+            Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
             Label {
                 text: root.hasTrack ? (root.track.device ? root.track.device + "  ·  Spotify ↗" : "Spotify ↗") : !spotify.deviceId ? "No device selected" : ""
-                color: Theme.primary; font.pixelSize: 10; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
+                color: Theme.primary; font.pixelSize: Theme.fs(10); Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText
                 TapHandler { onTapped: { if(root.track.url)spotify.openSpotify(root.track.url); else root.openDevices() } }
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
@@ -98,7 +98,7 @@ Rectangle {
             }
             RowLayout {
                 Layout.fillWidth: true; spacing: 10
-                Label { text: root.time(wave.shown); font.pixelSize: 10; color: Theme.muted; font.features: ({"tnum": 1}); Layout.minimumWidth: 30; horizontalAlignment: Text.AlignRight }
+                Label { text: root.time(wave.shown); font.pixelSize: Theme.fs(10); color: Theme.muted; font.features: ({"tnum": 1}); Layout.minimumWidth: 30; horizontalAlignment: Text.AlignRight }
                 WavyProgress {
                     id: wave
                     Layout.fillWidth: true
@@ -107,7 +107,7 @@ Rectangle {
                     seekable: root.available && root.hasTrack && !root.track.restricted && !root.restrictions.seeking
                     onSeekRequested: ms => spotify.seek(Math.round(ms))
                 }
-                Label { text: root.time(root.track.duration || 0); font.pixelSize: 10; color: Theme.muted; font.features: ({"tnum": 1}); Layout.minimumWidth: 30 }
+                Label { text: root.time(root.track.duration || 0); font.pixelSize: Theme.fs(10); color: Theme.muted; font.features: ({"tnum": 1}); Layout.minimumWidth: 30 }
             }
         }
         RowLayout {
@@ -141,10 +141,10 @@ Rectangle {
         y: root.compact ? parent.height-height-8 : Math.max(12,parent.height-height-root.height-24)
         width: root.compact ? parent.width-16 : Math.min(360,parent.width-32); padding: root.compact ? 18 : 22
         modal: root.compact; dim: root.compact
-        background: Rectangle { color: Theme.elevated; radius: 24; border.color: Theme.outline }
+        background: Rectangle { color: Theme.elevated; radius: Theme.r(24); border.color: Theme.outline }
         contentItem: ColumnLayout {
             spacing: 14
-            Label { text: "Where do you want to listen?"; font.pixelSize: root.compact ? 18 : 20; font.bold: true; color: Theme.text; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Label { text: "Where do you want to listen?"; font.pixelSize: Theme.fs(root.compact ? 18 : 20); font.bold: true; color: Theme.text; Layout.fillWidth: true; wrapMode: Text.WordWrap }
             Label { visible: Qt.platform.os !== "android"; text: localPlayer.status; color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }
             ActionButton { visible: Qt.platform.os === "android"; text: "Open Spotify on this phone"; symbol: "external"; filled: true; Layout.fillWidth: true; enabled: auth.connected; onClicked: spotify.openSpotifyApp() }
             ActionButton { visible: Qt.platform.os !== "android"; text: localPlayer.ready ? "Stop local player" : localPlayer.busy ? "Connecting player…" : "Listen on this computer"; symbol: "play"; filled: true; Layout.fillWidth: true; enabled: auth.connected && !localPlayer.busy; onClicked: localPlayer.ready ? localPlayer.stop() : localPlayer.start() }

@@ -7,7 +7,7 @@ Rectangle {
     property string current: "home"
     signal activated(string key)
     implicitHeight: 72
-    radius: 24; color: Theme.panel
+    radius: Theme.r(24); color: Theme.panel
     readonly property var items: [
         {key: "home", label: "Home", icon: "home"},
         {key: "search", label: "Search", icon: "search"},
@@ -31,7 +31,7 @@ Rectangle {
                     spacing: 4
                     Rectangle {
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: item.active ? 56 : 40; Layout.preferredHeight: 32; radius: 16
+                        Layout.preferredWidth: item.active ? 56 : 40; Layout.preferredHeight: 32; radius: Theme.r(16)
                         color: item.active ? Theme.container : item.pressed ? Theme.hover : "transparent"
                         border.width: item.visualFocus ? 2 : 0; border.color: Theme.primary
                         Behavior on Layout.preferredWidth { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
@@ -40,7 +40,7 @@ Rectangle {
                     }
                     Label {
                         Layout.alignment: Qt.AlignHCenter
-                        text: item.modelData.label; font.pixelSize: 11; font.bold: item.active
+                        text: item.modelData.label; font.pixelSize: Theme.fs(11); font.bold: item.active
                         color: item.active ? Theme.text : Theme.muted
                     }
                 }

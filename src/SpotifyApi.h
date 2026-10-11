@@ -15,6 +15,10 @@ class SpotifyApi : public QObject {
     Q_PROPERTY(QVariantList devices READ devices NOTIFY changed)
     Q_PROPERTY(QVariantMap playback READ playback NOTIFY playbackChanged)
     Q_PROPERTY(QVariantList playlistItems READ playlistItems NOTIFY contentChanged)
+    // Artists matching the last search, shown above the songs.
+    Q_PROPERTY(QVariantList artists READ artists NOTIFY contentChanged)
+    // Album, year and more songs of one song (see loadSongInfo); empty when closed.
+    Q_PROPERTY(QVariantMap songInfo READ songInfo NOTIFY songInfoChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY contentChanged)
     Q_PROPERTY(QString collection READ collection NOTIFY contentChanged)
     Q_PROPERTY(QString deviceId READ deviceId WRITE setDeviceId NOTIFY changed)
@@ -23,6 +27,7 @@ public:
     bool busy()const{return loading;} QString message()const{return info;} QString state()const{return status;}
     QVariantList playlistItems()const{return playlistRows;}
     QVariantList items()const{return rows;} QVariantList devices()const{return deviceRows;} QVariantMap playback()const{return player;}
+    QVariantList artists()const{return artistRows;} QVariantMap songInfo()const{return info_;}
     bool hasMore()const{return !next.isEmpty();} QString collection()const{return kind;}
     QString deviceId()const{return selectedDevice;} void setDeviceId(QString id);
     bool connected()const{return auth->connected();}
@@ -51,15 +56,19 @@ public:
     Q_INVOKABLE void setRepeat(QString mode);
     Q_INVOKABLE void openSpotify(QString url);
     Q_INVOKABLE void retry();
+    Q_INVOKABLE void loadSongInfo(QString uri,QString fallbackArtist=QString());
+    Q_INVOKABLE void closeSongInfo();
+    // Pauses a remote device when the app quits (waits briefly for Spotify to answer).
+    void pauseForExit();
 signals:
     void localControl(QString action,int value); void changed(); void contentChanged(); void playbackChanged();
-    void seeked(qint64 ms);
+    void seeked(qint64 ms); void songInfoChanged();
     // Short user-facing feedback for actions that happen outside the current page (snackbar).
     void notify(QString text);
 private:
     OAuth *auth; QNetworkAccessManager network;
     bool loading=false,preferLocal=false; QString status="idle",info="Connect Spotify to choose music for your session.";
-    QVariantList rows,deviceRows,playlistRows; QVariantMap player; QString localDevice; QString next,kind,selectedDevice,lastPath,lastKey,nextKey; bool lastAppend=false;
+    QVariantList rows,deviceRows,playlistRows,artistRows; QVariantMap info_; QVariantMap player; QString localDevice; QString next,kind,selectedDevice,lastPath,lastKey,nextKey; bool lastAppend=false;
     QTimer poll,trackEnd; int pollTicks=0;
     QElapsedTimer clock,noticeClock; QString lastNotice;
     QDateTime blockedUntil; int generation=0;

@@ -13,6 +13,7 @@
 #include "SpotifyApi.h"
 #include "FocusSession.h"
 #include "WebPlayback.h"
+#include "Lyrics.h"
 #include "SystemBars.h"
 #ifndef Q_OS_ANDROID
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
@@ -57,7 +58,7 @@ int main(int argc,char **argv){
     parser.addOption({"phone", "Open at a phone-sized window (412x892) to preview the mobile layout."});
     parser.addOption({"size", "Open at a given window size for previews, for example 360x780.", "WxH"});
     parser.process(app);
-    Preferences prefs;OAuth auth(&prefs,nullptr,!parser.isSet("audio-check"));SpotifyApi spotify(&auth);WebPlayback localPlayer(&auth);FocusSession focus;
+    Preferences prefs;OAuth auth(&prefs,nullptr,!parser.isSet("audio-check"));SpotifyApi spotify(&auth);WebPlayback localPlayer(&auth);FocusSession focus;Lyrics lyrics;
     QObject::connect(&localPlayer,&WebPlayback::localRequested,&spotify,&SpotifyApi::prepareLocalPlayback);
     QObject::connect(&localPlayer,&WebPlayback::deviceChanged,&spotify,&SpotifyApi::setLocalDevice);
     QObject::connect(&localPlayer,&WebPlayback::playbackState,&spotify,&SpotifyApi::updateLocalPlayback);
@@ -76,6 +77,8 @@ int main(int argc,char **argv){
     engine.rootContext()->setContextProperty("spotify",&spotify);
     engine.rootContext()->setContextProperty("localPlayer",&localPlayer);
     engine.rootContext()->setContextProperty("focusSession",&focus);
+    engine.rootContext()->setContextProperty("lyrics",&lyrics);
+    if(!parser.isSet("capture"))QObject::connect(&app,&QCoreApplication::aboutToQuit,&spotify,[&]{if(prefs.pauseOnClose())spotify.pauseForExit();});
     SystemBars systemBars;
     engine.rootContext()->setContextProperty("systemBars",&systemBars);
     engine.rootContext()->setContextProperty("appName",AppConfig::name);

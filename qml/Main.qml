@@ -12,8 +12,10 @@ ApplicationWindow {
     Material.accent: Theme.primary; Material.primary: Theme.primary
     Material.foreground: Theme.text; Material.background: Theme.panel
     color: Theme.base
-    font.family: Qt.platform.os === "windows" ? "Segoe UI" : Qt.platform.os === "android" ? "Roboto" : "Noto Sans"
-    font.pixelSize: 14
+    font.family: prefs.fontStyle === 1 ? (Qt.platform.os === "windows" || Qt.platform.os === "osx" ? "Georgia" : "Noto Serif")
+               : prefs.fontStyle === 2 ? (Qt.platform.os === "windows" ? "Consolas" : Qt.platform.os === "osx" ? "Menlo" : "Monospace")
+               : Qt.platform.os === "windows" ? "Segoe UI" : Qt.platform.os === "android" ? "Roboto" : "Noto Sans"
+    font.pixelSize: Theme.fs(14)
     property int activePage: initialPage === 2 ? 1 : 0
     property bool narrow: width < 980
     // Phone layout: bottom navigation instead of the sidebar, compact player. Always on Android.
@@ -39,7 +41,7 @@ ApplicationWindow {
     readonly property var focusTarget: window.activeFocusItem
     readonly property bool typing: !!focusTarget && (focusTarget.cursorPosition !== undefined || focusTarget.focusReason === Qt.TabFocusReason || focusTarget.focusReason === Qt.BacktabFocusReason)
     function navigate(mode) { activePage=0; music.mode=mode; if(auth.connected&&!spotify.busy){if(mode===2)spotify.library();if(mode===3)spotify.playlists()} }
-    function searchFor(term) { activePage=0; search.text=term; music.searchTerm=term; music.mode=1; if(auth.connected&&!spotify.busy)spotify.search(term) }
+    function searchFor(term) { prefs.rememberSearch(term); activePage=0; search.text=term; music.searchTerm=term; music.mode=1; if(auth.connected&&!spotify.busy)spotify.search(term) }
     Settings {
         category: "window"
         property alias width: window.width
@@ -72,7 +74,7 @@ ApplicationWindow {
             RowLayout {
                 Layout.preferredWidth: window.phone ? 40 : window.narrow ? 66 : 220; spacing: 10
                 Image { source: "qrc:/assets/mira.png"; Layout.preferredWidth: window.phone ? 36 : 40; Layout.preferredHeight: Layout.preferredWidth }
-                Label { visible: !window.narrow; text: appName.toLowerCase(); font.pixelSize: 27; font.bold: true; font.letterSpacing: -1; color: Theme.text }
+                Label { visible: !window.narrow; text: appName.toLowerCase(); font.pixelSize: Theme.fs(27); font.bold: true; font.letterSpacing: -1; color: Theme.text }
             }
             Rectangle {
                 Layout.fillWidth: true; Layout.maximumWidth: 620; Layout.preferredHeight: window.phone ? 44 : 48; radius: height/2; color: Theme.elevated
@@ -88,7 +90,7 @@ ApplicationWindow {
                         Accessible.name: "Search music on Spotify"
                     }
                     ActionButton { symbol: "close"; compact: true; hint: "Clear search"; visible: search.text.length>0; onClicked: {search.text="";search.forceActiveFocus()} }
-                    Label { text: "Ctrl K"; visible: window.width > 1000 && search.text.length===0; color: Theme.muted; font.pixelSize: 11 }
+                    Label { text: "Ctrl K"; visible: window.width > 1000 && search.text.length===0; color: Theme.muted; font.pixelSize: Theme.fs(11) }
                     ActionButton { symbol: search.text.length ? "arrow" : "search"; compact: true; hint: "Search"; enabled: !spotify.busy; onClicked: {if(search.text.trim().length)window.searchFor(search.text.trim());else{window.navigate(1);search.forceActiveFocus()}} }
                 }
             }
@@ -100,7 +102,7 @@ ApplicationWindow {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
             Rectangle {
                 visible: !window.phone
-                Layout.preferredWidth: window.narrow ? 68 : 224; Layout.fillHeight: true; radius: 24; color: Theme.panel
+                Layout.preferredWidth: window.narrow ? 68 : 224; Layout.fillHeight: true; radius: Theme.r(24); color: Theme.panel
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 12; spacing: 6
                     ActionButton { text: window.narrow ? "" : "Home"; symbol: "home"; hint: "Home (Ctrl+1)"; Layout.fillWidth: true; selected: window.activePage===0 && music.mode===0; onClicked: window.navigate(0) }
@@ -108,46 +110,48 @@ ApplicationWindow {
                     Rectangle { Layout.fillWidth: true; Layout.topMargin: 14; Layout.bottomMargin: 10; height: 1; color: Theme.outline; opacity: 0.6 }
                     RowLayout {
                         visible: !window.narrow; Layout.fillWidth: true; Layout.bottomMargin: 6
-                        Label { text: "YOUR LIBRARY"; font.pixelSize: 10; font.letterSpacing: 1.4; color: Theme.muted; Layout.fillWidth: true }
+                        Label { text: "YOUR LIBRARY"; font.pixelSize: Theme.fs(10); font.letterSpacing: 1.4; color: Theme.muted; Layout.fillWidth: true }
                         ActionButton { symbol: "refresh"; compact: true; hint: "Refresh playlists"; enabled: auth.connected&&!spotify.busy; onClicked: window.navigate(3) }
                     }
                     ActionButton { text: window.narrow ? "" : "Liked songs"; symbol: "heart"; hint: "Saved songs (Ctrl+2)"; Layout.fillWidth: true; selected: window.activePage===0 && music.mode===2; onClicked: window.navigate(2) }
                     ActionButton { text: window.narrow ? "" : "Playlists"; symbol: "library"; hint: "Playlists"; Layout.fillWidth: true; selected: window.activePage===0 && (music.mode===3||music.mode===4); onClicked: window.navigate(3) }
                     ListView {
+                        id: sidebarList
                         visible: !window.narrow; Layout.fillWidth: true; Layout.fillHeight: true; clip: true; spacing: 6
                         model: spotify.playlistItems
+                        SmoothScroll { flick: sidebarList }
                         delegate: ItemDelegate {
                             required property var modelData
                             width: ListView.view.width; height: 60; padding: 6
-                            background: Rectangle { radius: 14; color: parent.hovered ? Theme.elevated : "transparent"; border.width: parent.visualFocus?1:0; border.color: Theme.primary }
+                            background: Rectangle { radius: Theme.r(14); color: parent.hovered ? Theme.elevated : "transparent"; border.width: parent.visualFocus?1:0; border.color: Theme.primary }
                             contentItem: RowLayout {
                                 spacing: 10
                                 CoverArt { source: modelData.cover; Layout.preferredWidth: 42; Layout.preferredHeight: 42 }
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: 3
-                                    Label { text: modelData.name; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; font.pixelSize: 12; textFormat: Text.PlainText }
-                                    Label { text: "Playlist · Spotify"; color: Theme.muted; font.pixelSize: 10 }
+                                    Label { text: modelData.name; color: Theme.text; Layout.fillWidth: true; elide: Text.ElideRight; font.pixelSize: Theme.fs(12); textFormat: Text.PlainText }
+                                    Label { text: "Playlist · Spotify"; color: Theme.muted; font.pixelSize: Theme.fs(10) }
                                 }
                             }
                             onClicked: {window.activePage=0;music.openPlaylist(modelData)}
                             Accessible.name: "Open playlist " + modelData.name
                         }
-                        Label { anchors.fill: parent; anchors.margins: 8; anchors.topMargin: 24; visible: spotify.playlistItems.length===0; text: auth.connected ? "No playlists loaded.\nUse the refresh button above." : "Connect Spotify to see\nyour playlists here."; color: Theme.muted; font.pixelSize: 12; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Label { anchors.fill: parent; anchors.margins: 8; anchors.topMargin: 24; visible: spotify.playlistItems.length===0; text: auth.connected ? "No playlists loaded.\nUse the refresh button above." : "Connect Spotify to see\nyour playlists here."; color: Theme.muted; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     }
                     Item { visible: window.narrow; Layout.fillHeight: true }
                     ActionButton { text: window.narrow ? "" : "Session timer"; symbol: "timer"; hint: "Optional session timer"; Layout.fillWidth: true; onClicked: timerPopup.open() }
                     ActionButton { text: window.narrow ? "" : "Settings"; symbol: "settings"; hint: "Settings and about (Ctrl+3)"; selected: window.activePage===1; Layout.fillWidth: true; onClicked: window.activePage=1 }
-                    Label { visible: !window.narrow; text: "Independent Spotify companion"; color: Theme.muted; font.pixelSize: 9; Layout.topMargin: 8; Layout.alignment: Qt.AlignHCenter }
+                    Label { visible: !window.narrow; text: "Independent Spotify companion"; color: Theme.muted; font.pixelSize: Theme.fs(9); Layout.topMargin: 8; Layout.alignment: Qt.AlignHCenter }
                 }
             }
             Rectangle {
-                Layout.fillWidth: true; Layout.fillHeight: true; radius: window.phone ? 20 : 28; color: Theme.panel; clip: true
+                Layout.fillWidth: true; Layout.fillHeight: true; radius: Theme.r(window.phone ? 20 : 28); color: Theme.panel; clip: true
                 StackLayout {
                     id: pages
                     anchors.fill: parent; anchors.margins: window.phone ? 14 : window.width < 780 ? 18 : 28; currentIndex: window.activePage
                     onCurrentIndexChanged: pageFade.restart()
                     NumberAnimation { id: pageFade; target: pages; property: "opacity"; from: 0.4; to: 1; duration: 200; easing.type: Easing.OutCubic }
-                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
+                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSongInfoRequested: track=>songInfo.openFor(track); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
                     SettingsPage { phone: window.phone; onTimerRequested: timerPopup.open() }
                 }
             }
@@ -166,7 +170,8 @@ ApplicationWindow {
             }
         }
     }
-    NowPlaying { id: nowPlaying; bar: playerBar }
+    NowPlaying { id: nowPlaying; bar: playerBar; onInfoRequested: track=>songInfo.openFor(track) }
+    SongInfo { id: songInfo; onSearchRequested: term=>window.searchFor(term) }
     Rectangle {
         id: snackbar
         property string text: ""
@@ -174,7 +179,7 @@ ApplicationWindow {
         parent: Overlay.overlay; z: 10
         anchors.horizontalCenter: parent.horizontalCenter
         y: parent.height - playerBar.height - (window.phone ? navBar.height + 8 : 0) - height - 36
-        width: Math.min(560, parent.width - 48); height: snackLabel.implicitHeight + 28; radius: 14
+        width: Math.min(560, parent.width - 48); height: snackLabel.implicitHeight + 28; radius: Theme.r(14)
         color: prefs.dark ? "#e6e0e9" : "#322f35"
         opacity: 0; visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -186,10 +191,10 @@ ApplicationWindow {
     Popup {
         id: timerPopup; parent: Overlay.overlay; anchors.centerIn: parent
         width: Math.min(920,parent.width-(window.phone?16:32)); height: Math.min(700,parent.height-(window.phone?16:32)); modal: true; padding: window.phone ? 14 : 24
-        background: Rectangle { radius: 28; color: Theme.panel; border.color: Theme.outline }
+        background: Rectangle { radius: Theme.r(28); color: Theme.panel; border.color: Theme.outline }
         ColumnLayout {
             anchors.fill: parent
-            RowLayout { Layout.fillWidth: true; Label { text: "Session timer"; font.pixelSize: 20; color: Theme.text; Layout.fillWidth: true } ActionButton { symbol: "close"; hint: "Close"; onClicked: timerPopup.close() } }
+            RowLayout { Layout.fillWidth: true; Label { text: "Session timer"; font.pixelSize: Theme.fs(20); color: Theme.text; Layout.fillWidth: true } ActionButton { symbol: "close"; hint: "Close"; onClicked: timerPopup.close() } }
             FocusPage { Layout.fillWidth: true; Layout.fillHeight: true; onChooseMusic: {timerPopup.close();window.navigate(0)} }
         }
     }

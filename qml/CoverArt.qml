@@ -5,7 +5,7 @@ Item {
     property string source: ""
     property int variant: 0
     property color tint: Theme.container
-    property real radius: Math.max(6, Math.min(width, height) * 0.12)
+    property real radius: Math.round(Math.max(6, Math.min(width, height) * 0.12) * Theme.cornerScale)
     readonly property bool ready: image.status === Image.Ready
     readonly property bool hardware: GraphicsInfo.api !== GraphicsInfo.Software
     implicitWidth: 56; implicitHeight: 56

@@ -6,6 +6,8 @@
 #include <QRegularExpression>
 #include <QGuiApplication>
 #include <QRandomGenerator>
+#include <QEventLoop>
+#include <QTimer>
 #include <algorithm>
 SpotifyApi::SpotifyApi(OAuth *a,QObject *p):QObject(p),auth(a){
     network.setTransferTimeout(15000);
@@ -30,7 +32,7 @@ SpotifyApi::SpotifyApi(OAuth *a,QObject *p):QObject(p),auth(a){
     connect(&trackEnd,&QTimer::timeout,this,[this]{if(auth->connected())refreshPlayer(false);});
     connect(auth,&OAuth::disconnected,this,[this]{
         ++generation;for(auto *reply:network.findChildren<QNetworkReply*>())reply->abort();
-        rows.clear();deviceRows.clear();playlistRows.clear();userId.clear();pendingPlay={};publish({});next.clear();selectedDevice.clear();localDevice.clear();
+        rows.clear();deviceRows.clear();playlistRows.clear();artistRows.clear();info_.clear();userId.clear();pendingPlay={};publish({});next.clear();selectedDevice.clear();localDevice.clear();
         preferLocal=false;loading=false;status="idle";info="Spotify is disconnected.";emit contentChanged();emit changed();
     });
 }
@@ -79,7 +81,7 @@ QVariantMap SpotifyApi::item(QJsonObject o){
     QStringList names;for(const auto &a:o["artists"].toArray())names<<a.toObject()["name"].toString();
     if(names.isEmpty())names<<o["owner"].toObject()["display_name"].toString();
     auto album=o["album"].toObject();
-    auto images=(o["type"].toString()=="playlist"?o:album)["images"].toArray();
+    auto images=(QStringList{"playlist","artist"}.contains(o["type"].toString())?o:album)["images"].toArray();
     const QUrl image(images.isEmpty()?QString():images.first().toObject()["url"].toString());
     // Album art comes from i.scdn.co; playlist covers (uploads, mosaics, mixes, blends) also from *.spotifycdn.com.
     const bool spotifyImage=image.host().endsWith(".scdn.co") || image.host().endsWith(".spotifycdn.com");
@@ -89,8 +91,14 @@ QVariantMap SpotifyApi::item(QJsonObject o){
 void SpotifyApi::load(QString path,QString key,bool append){
     if(loading)return;
     lastPath=path;lastKey=key;lastAppend=append;
-    if(!append){rows.clear();next.clear();emit contentChanged();}
+    if(!append){rows.clear();artistRows.clear();next.clear();emit contentChanged();}
     request("GET",path,{},[this,key,append](QJsonObject obj){
+        if(!append){
+            artistRows.clear();
+            if(kind=="search")for(const auto &v:obj["artists"].toObject()["items"].toArray()){
+                const auto a=v.toObject();if(a["type"].toString()=="artist" && !a["name"].toString().isEmpty())artistRows.append(item(a));
+            }
+        }
         if(!key.isEmpty())obj=obj[key].toObject();
         if(!append)rows.clear();
         for(const auto &v:obj["items"].toArray()){
@@ -103,7 +111,7 @@ void SpotifyApi::load(QString path,QString key,bool append){
         emit contentChanged();
     });
 }
-void SpotifyApi::search(QString term){if(loading||term.trimmed().isEmpty())return;kind="search";QUrlQuery q;q.addQueryItem("q",term.trimmed());q.addQueryItem("type","track");q.addQueryItem("limit","10");load("/search?"+q.query(QUrl::FullyEncoded),"tracks");}
+void SpotifyApi::search(QString term){if(loading||term.trimmed().isEmpty())return;kind="search";QUrlQuery q;q.addQueryItem("q",term.trimmed());q.addQueryItem("type","track,artist");q.addQueryItem("limit","10");load("/search?"+q.query(QUrl::FullyEncoded),"tracks");}
 void SpotifyApi::library(){if(loading)return;kind="library";load("/me/tracks?limit=50",{});}
 void SpotifyApi::playlists(){if(loading)return;kind="playlists";load("/me/playlists?limit=20",{});}
 void SpotifyApi::playlist(QString id){if(loading||!QRegularExpression("^[A-Za-z0-9]+$").match(id).hasMatch())return;kind="playlist";load("/playlists/"+id+"/items?limit=20",{});}
@@ -362,4 +370,38 @@ void SpotifyApi::activateLocal(){
         if(o["is_playing"].toBool()){announce(QString("Music is playing on %1. Choose this computer under devices (Ctrl+D) to move it here.").arg(device["name"].toString()));return;}
         request("PUT","/me/player",QJsonObject{{"device_ids",QJsonArray{id}},{"play",false}},[this](QJsonObject){announce("This computer is now your Spotify device.");refreshSoon();},true);
     },true);
+}
+
+void SpotifyApi::closeSongInfo(){if(info_.isEmpty())return;info_.clear();emit songInfoChanged();}
+void SpotifyApi::loadSongInfo(QString uri,QString fallbackArtist){
+    static const QRegularExpression ids("^spotify:track:([A-Za-z0-9]+)$");
+    const auto m=ids.match(uri);if(!m.hasMatch())return;
+    info_={{"uri",uri},{"ready",false}};emit songInfoChanged();
+    request("GET","/tracks/"+m.captured(1),{},[this,uri,fallbackArtist](QJsonObject track){
+        if(info_["uri"].toString()!=uri)return;
+        const auto album=track["album"].toObject(),artist=track["artists"].toArray().isEmpty()?QJsonObject():track["artists"].toArray().first().toObject();
+        const auto albumItem=item(QJsonObject{{"album",album},{"name",album["name"]},{"uri",album["uri"]},{"external_urls",album["external_urls"]},{"type","album"}});
+        QString artistName=artist["name"].toString();if(artistName.isEmpty())artistName=fallbackArtist;
+        info_={{"uri",uri},{"ready",true},{"albumName",album["name"].toString()},{"albumUri",album["uri"].toString()},{"albumUrl",albumItem["url"]},{"albumCover",albumItem["cover"]},
+               {"year",album["release_date"].toString().left(4)},{"albumSongs",album["total_tracks"].toInt()},{"artistName",artistName},{"artistUrl",artist["external_urls"].toObject()["spotify"].toString()},{"more",QVariantList{}}};
+        emit songInfoChanged();
+        if(artistName.isEmpty())return;
+        QUrlQuery q;q.addQueryItem("q","artist:\""+artistName+"\"");q.addQueryItem("type","track");q.addQueryItem("limit","10");
+        request("GET","/search?"+q.query(QUrl::FullyEncoded),{},[this,uri](QJsonObject found){
+            if(info_["uri"].toString()!=uri)return;
+            QVariantList more;
+            for(const auto &v:found["tracks"].toObject()["items"].toArray()){
+                const auto t=v.toObject();if(t["uri"].toString()==uri || t["is_local"].toBool())continue;
+                more.append(item(t));if(more.size()==6)break;
+            }
+            info_["more"]=more;emit songInfoChanged();
+        },true);
+    },true);
+}
+void SpotifyApi::pauseForExit(){
+    if(!auth->connected() || !player.value("playing").toBool() || localActive() || controlDevice().isEmpty())return;
+    QEventLoop loop;QTimer limit;limit.setSingleShot(true);
+    connect(&limit,&QTimer::timeout,&loop,&QEventLoop::quit);
+    request("PUT",target("/me/player/pause",{},controlDevice()),{},[&loop](QJsonObject){loop.quit();},true);
+    limit.start(2000);loop.exec();
 }

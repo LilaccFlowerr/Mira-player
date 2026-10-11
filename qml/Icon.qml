@@ -44,6 +44,8 @@ Canvas {
         case "repeat": line([4,12,4,8,6,6,20,6]);line([17,3,20,6,17,9]);line([20,12,20,16,18,18,4,18]);line([7,15,4,18,7,21]);break
         case "repeatOne": line([4,12,4,8,6,6,20,6]);line([17,3,20,6,17,9]);line([20,12,20,16,18,18,4,18]);line([7,15,4,18,7,21]);line([10.5,10.5,12,9.5,12,14.5]);break
         case "mute": line([4,10,8,10,13,5,13,19,8,14,4,14,4,10]);line([16,9,22,15]);line([22,9,16,15]);break
+        case "lyrics": line([4,6,20,6]);line([4,11,16,11]);line([4,16,20,16]);line([4,21,12,21]);break
+        case "info": circle(12,12,9,false);line([12,11,12,17]);circle(12,7.5,1,true);break
         case "bars": c.fillRect(4.5,10,3,10);c.fillRect(10.5,4,3,16);c.fillRect(16.5,13,3,7);break
         default: line([9,17,9,5,19,3,19,15]);circle(6,18,3,true);circle(16,16,3,true)
         }
