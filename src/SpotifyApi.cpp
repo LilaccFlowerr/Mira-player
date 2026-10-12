@@ -32,7 +32,7 @@ SpotifyApi::SpotifyApi(OAuth *a,QObject *p):QObject(p),auth(a){
     connect(&trackEnd,&QTimer::timeout,this,[this]{if(auth->connected())refreshPlayer(false);});
     connect(auth,&OAuth::disconnected,this,[this]{
         ++generation;for(auto *reply:network.findChildren<QNetworkReply*>())reply->abort();
-        rows.clear();deviceRows.clear();playlistRows.clear();artistRows.clear();info_.clear();userId.clear();pendingPlay={};publish({});next.clear();selectedDevice.clear();localDevice.clear();
+        rows.clear();deviceRows.clear();playlistRows.clear();artistRows.clear();artistTrackRows.clear();artistAlbumRows.clear();artistData.clear();artistLikedRows.clear();likedAll.clear();likedTmp.clear();likedAt=QDateTime();likedScanning=false;++likedScanId;++artistToken;artistBusy=0;info_.clear();userId.clear();pendingPlay={};publish({});next.clear();selectedDevice.clear();localDevice.clear();
         preferLocal=false;loading=false;status="idle";info="Spotify is disconnected.";emit contentChanged();emit changed();
     });
 }
@@ -78,15 +78,21 @@ void SpotifyApi::request(QByteArray method,QString path,QJsonObject body,Callbac
     });
 }
 QVariantMap SpotifyApi::item(QJsonObject o){
-    QStringList names;for(const auto &a:o["artists"].toArray())names<<a.toObject()["name"].toString();
+    QStringList names,artistIds;
+    for(const auto &a:o["artists"].toArray()){
+        const auto artist=a.toObject();names<<artist["name"].toString();
+        // Spotify's player reports artists by uri only.
+        QString id=artist["id"].toString();if(id.isEmpty())id=artist["uri"].toString().section(':',2,2);
+        artistIds<<id;
+    }
     if(names.isEmpty())names<<o["owner"].toObject()["display_name"].toString();
     auto album=o["album"].toObject();
-    auto images=(QStringList{"playlist","artist"}.contains(o["type"].toString())?o:album)["images"].toArray();
+    auto images=(QStringList{"playlist","artist","album"}.contains(o["type"].toString())?o:album)["images"].toArray();
     const QUrl image(images.isEmpty()?QString():images.first().toObject()["url"].toString());
     // Album art comes from i.scdn.co; playlist covers (uploads, mosaics, mixes, blends) also from *.spotifycdn.com.
     const bool spotifyImage=image.host().endsWith(".scdn.co") || image.host().endsWith(".spotifycdn.com");
     const QString cover=image.scheme()=="https" && image.userInfo().isEmpty() && spotifyImage ? image.toString() : QString();
-    return {{"cover",cover},{"album",album["name"].toString()},{"duration",o["duration_ms"].toInt()}, {"id",o["id"].toString()},{"name",o["name"].toString("Unavailable")},{"subtitle",names.join(", ")},{"artists",names},{"uri",o["uri"].toString()},{"url",o["external_urls"].toObject()["spotify"].toString()},{"type",o["type"].toString()},{"explicit",o["explicit"].toBool()}};
+    return {{"cover",cover},{"album",album["name"].toString()},{"duration",o["duration_ms"].toInt()}, {"id",o["id"].toString()},{"name",o["name"].toString("Unavailable")},{"subtitle",names.join(", ")},{"artists",names},{"artistIds",artistIds},{"year",o["release_date"].toString().left(4)},{"albumType",o["album_type"].toString()},{"releaseDate",o["release_date"].toString()},{"uri",o["uri"].toString()},{"url",o["external_urls"].toObject()["spotify"].toString()},{"type",o["type"].toString()},{"explicit",o["explicit"].toBool()}};
 }
 void SpotifyApi::load(QString path,QString key,bool append){
     if(loading)return;
@@ -104,7 +110,9 @@ void SpotifyApi::load(QString path,QString key,bool append){
         for(const auto &v:obj["items"].toArray()){
             auto o=v.toObject();if(o.contains("track"))o=o["track"].toObject();else if(o.contains("item"))o=o["item"].toObject();
             if(o.isEmpty() || o["is_local"].toBool() || !QStringList{"track","playlist"}.contains(o["type"].toString()))continue;
-            rows.append(item(o));
+            auto row=item(o);
+            if(kind=="album")for(auto it=rowDefaults.begin();it!=rowDefaults.end();++it)row[it.key()]=it.value();
+            rows.append(row);
         }
         if(kind=="playlists")playlistRows=rows;
         next=obj["next"].toString();nextKey=key;status=rows.isEmpty()?"empty":"ready";info=rows.isEmpty()?"No results. Try a different selection.":"Content provided by Spotify • open an item in Spotify for all features.";
@@ -239,8 +247,8 @@ void SpotifyApi::play(QString uri){
     // The SDK can only resume what it already plays; otherwise the Web API moves playback to this device.
     if(uri.isEmpty() && localActive() && selectedDevice==localDevice){emit localControl("resume",0);return;}
     QJsonObject b;if(!uri.isEmpty()){
-        if(!QRegularExpression("^spotify:(track|playlist):[A-Za-z0-9]+$").match(uri).hasMatch())return;
-        if(uri.startsWith("spotify:playlist:"))b["context_uri"]=uri;else b["uris"]=QJsonArray{uri};
+        if(!QRegularExpression("^spotify:(track|playlist|album|artist):[A-Za-z0-9]+$").match(uri).hasMatch())return;
+        if(!uri.startsWith("spotify:track:"))b["context_uri"]=uri;else b["uris"]=QJsonArray{uri};
     }
     startPlayback(b);
 }
@@ -280,7 +288,7 @@ void SpotifyApi::playLiked(QStringList uris,int index,bool shuffle){
     },true,false,fallback);
 }
 void SpotifyApi::playInContext(QString context,QString uri){
-    if(!QRegularExpression("^spotify:playlist:[A-Za-z0-9]+$").match(context).hasMatch())return;
+    if(!QRegularExpression("^spotify:(playlist|album):[A-Za-z0-9]+$").match(context).hasMatch())return;
     QJsonObject b{{"context_uri",context}};
     if(QRegularExpression("^spotify:track:[A-Za-z0-9]+$").match(uri).hasMatch())b["offset"]=QJsonObject{{"uri",uri}};
     startPlayback(b);
@@ -319,6 +327,7 @@ void SpotifyApi::setRepeat(QString mode){
     request("PUT",target("/me/player/repeat",{{"state",mode}},controlDevice()),{},[this](QJsonObject){refreshSoon();},true);
 }
 void SpotifyApi::save(QString uri,bool remove){
+    likedAt=QDateTime();
     if(!QRegularExpression("^spotify:track:[A-Za-z0-9]+$").match(uri).hasMatch())return;
     QUrlQuery q;q.addQueryItem("uris",uri);
     request(remove?"DELETE":"PUT","/me/library?"+q.query(QUrl::FullyEncoded),{},[this,remove](QJsonObject){info=remove?"Removed from your saved songs. Refresh the library.":"Added to your saved songs in Spotify.";emit changed();announce(info);},true);
@@ -392,7 +401,7 @@ void SpotifyApi::loadSongInfo(QString uri,QString fallbackArtist){
         const auto albumItem=item(QJsonObject{{"album",album},{"name",album["name"]},{"uri",album["uri"]},{"external_urls",album["external_urls"]},{"type","album"}});
         QString artistName=artist["name"].toString();if(artistName.isEmpty())artistName=fallbackArtist;
         info_={{"uri",uri},{"ready",true},{"albumName",album["name"].toString()},{"albumUri",album["uri"].toString()},{"albumUrl",albumItem["url"]},{"albumCover",albumItem["cover"]},
-               {"year",album["release_date"].toString().left(4)},{"albumSongs",album["total_tracks"].toInt()},{"artistName",artistName},{"artistUrl",artist["external_urls"].toObject()["spotify"].toString()},{"more",QVariantList{}}};
+               {"year",album["release_date"].toString().left(4)},{"albumSongs",album["total_tracks"].toInt()},{"artistName",artistName},{"artistId",artist["id"].toString()},{"artistUrl",artist["external_urls"].toObject()["spotify"].toString()},{"more",QVariantList{}}};
         emit songInfoChanged();
         if(artistName.isEmpty())return;
         QUrlQuery q;q.addQueryItem("q","artist:\""+artistName+"\"");q.addQueryItem("type","track");q.addQueryItem("limit","10");
@@ -442,5 +451,115 @@ void SpotifyApi::resetQueue(){
     },true,false,[this,device,body,note]{
         // Shuffle could not be changed (restricted); restart the list anyway.
         request("PUT",target("/me/player/play",{},device),body,[this,note](QJsonObject){announce(note);refreshSoon();},true);
+    });
+}
+void SpotifyApi::album(QString id,QVariantMap meta){
+    if(loading || !QRegularExpression("^[A-Za-z0-9]+$").match(id).hasMatch())return;
+    kind="album";
+    rowDefaults={{"cover",meta["cover"].toString()},{"album",meta["name"].toString()}};
+    load("/albums/"+id+"/tracks?limit=50",{});
+}
+void SpotifyApi::playArtist(QString uri,bool shuffle){
+    if(!QRegularExpression("^spotify:artist:[A-Za-z0-9]+$").match(uri).hasMatch())return;
+    if(needDevice([this,uri,shuffle]{playArtist(uri,shuffle);}))return;
+    const QJsonObject body{{"context_uri",uri}};
+    // Shuffle has to be set before starting so the first song is random too.
+    if(shuffle)request("PUT",target("/me/player/shuffle",{{"state","true"}},selectedDevice),{},[this,body](QJsonObject){startPlayback(body);},true,false,[this,body]{startPlayback(body);});
+    else startPlayback(body);
+}
+void SpotifyApi::openArtist(QString id,QString name,QString cover){
+    if(!QRegularExpression("^[A-Za-z0-9]+$").match(id).hasMatch())return;
+    const int token=++artistToken;
+    artistData={{"id",id},{"name",name},{"cover",cover},{"url","https://open.spotify.com/artist/"+id},{"uri","spotify:artist:"+id},{"genres",QStringList{}}};
+    artistTrackRows.clear();artistAlbumRows.clear();artistLikedRows.clear();artistBusy=2;emit artistChanged();
+    scanLiked();
+    auto done=[this,token]{if(token!=artistToken)return;if(artistBusy>0)--artistBusy;emit artistChanged();};
+    // Spotify no longer has a top-tracks endpoint, so the songs come from a search for the artist, limited to their own.
+    auto songs=[this,token,id,done](QString artistName){
+        QUrlQuery q;q.addQueryItem("q","artist:\""+artistName+"\"");q.addQueryItem("type","track");q.addQueryItem("limit","10");
+        request("GET","/search?"+q.query(QUrl::FullyEncoded),{},[this,token,id,done](QJsonObject r){
+            if(token!=artistToken)return;
+            for(const auto &v:r["tracks"].toObject()["items"].toArray()){
+                const auto t=v.toObject();if(t["is_local"].toBool())continue;
+                auto row=item(t);if(row["artistIds"].toStringList().contains(id))artistTrackRows.append(row);
+            }
+            done();
+        },true,false,done);
+    };
+    request("GET","/artists/"+id,{},[this,token,songs,name](QJsonObject a){
+        if(token!=artistToken)return;
+        const auto row=item(a);
+        QStringList genres;for(const auto &g:a["genres"].toArray())genres<<g.toString();
+        if(!a["name"].toString().isEmpty())artistData["name"]=a["name"].toString();
+        if(!row["cover"].toString().isEmpty())artistData["cover"]=row["cover"];
+        artistData["genres"]=genres;emit artistChanged();
+        if(name.isEmpty())songs(a["name"].toString());
+    },true,false,[this,token,songs,name]{if(token==artistToken && name.isEmpty())songs(name);});
+    if(!name.isEmpty())songs(name);
+    // Spotify limits what a Development Mode app may ask for, so try the full request first, then simpler ones,
+    // and finally a search for the artist's albums.
+    auto show=[this,token,id,done](QJsonArray items)->bool{
+        if(token!=artistToken)return true;
+        QVariantList list;QSet<QString> seen;
+        for(const auto &v:items){
+            const auto a=v.toObject();if(a["type"].toString()!="album")continue;
+            const auto row=item(a);
+            const QStringList by=row["artistIds"].toStringList();
+            if(!by.isEmpty() && !by.contains(id))continue;
+            // Spotify lists many editions of one release; show each title once.
+            const QString key=row["name"].toString().toLower();
+            if(!seen.contains(key)){seen.insert(key);list.append(row);}
+        }
+        if(list.isEmpty())return false;
+        std::stable_sort(list.begin(),list.end(),[](const QVariant &x,const QVariant &y){return x.toMap()["releaseDate"].toString()>y.toMap()["releaseDate"].toString();});
+        artistAlbumRows=list;done();return true;
+    };
+    auto searchAlbums=[this,token,name,show,done]{
+        if(token!=artistToken)return;
+        const QString who=name.isEmpty()?artistData["name"].toString():name;
+        QUrlQuery q;q.addQueryItem("q","artist:\""+who+"\"");q.addQueryItem("type","album");q.addQueryItem("limit","10");
+        request("GET","/search?"+q.query(QUrl::FullyEncoded),{},[this,show,done](QJsonObject r){
+            if(!show(r["albums"].toObject()["items"].toArray())){artistData["albumsError"]=true;emit artistChanged();done();}
+        },true,false,[this,token,done]{if(token==artistToken){artistData["albumsError"]=true;emit artistChanged();}done();});
+    };
+    auto simple=[this,id,show,searchAlbums]{
+        request("GET","/artists/"+id+"/albums?limit=10",{},[show,searchAlbums](QJsonObject r){if(!show(r["items"].toArray()))searchAlbums();},true,false,searchAlbums);
+    };
+    request("GET","/artists/"+id+"/albums?include_groups=album,single&limit=50",{},[show,simple](QJsonObject r){if(!show(r["items"].toArray()))simple();},true,false,simple);
+}
+void SpotifyApi::publishLiked(){
+    const QString id=artistData["id"].toString();
+    artistLikedRows.clear();
+    for(const auto &v:likedScanning?likedTmp:likedAll)if(v.toMap()["artistIds"].toStringList().contains(id))artistLikedRows.append(v);
+    emit artistChanged();
+}
+void SpotifyApi::scanLiked(){
+    // Spotify cannot filter your saved songs by artist, so the library is read in pages (and kept for ten minutes).
+    if(artistData["id"].toString().isEmpty())return;
+    if(!likedScanning && likedAt.isValid() && likedAt.secsTo(QDateTime::currentDateTime())<600){publishLiked();return;}
+    if(likedScanning){publishLiked();return;}
+    likedScanning=true;likedTmp.clear();publishLiked();
+    const int id=++likedScanId;
+    // A read that never finishes (rate limit) must not leave the page "searching" for ever.
+    QTimer::singleShot(180000,this,[this,id]{if(id==likedScanId && likedScanning){likedScanning=false;likedAt=QDateTime();publishLiked();}});
+    scanLikedPage("/me/tracks?limit=50",0);
+}
+void SpotifyApi::scanLikedPage(QString path,int n){
+    const int id=likedScanId,g=generation;
+    request("GET",path,{},[this,id,g,n](QJsonObject r){
+        if(id!=likedScanId||g!=generation)return;
+        for(const auto &v:r["items"].toArray()){
+            const auto t=v.toObject()["track"].toObject();
+            if(t.isEmpty()||t["is_local"].toBool()||t["type"].toString()!="track")continue;
+            likedTmp.append(item(t));
+        }
+        publishLiked();
+        const QString next=r["next"].toString();
+        if(!next.isEmpty() && n<80){QTimer::singleShot(150,this,[this,id,next,n]{if(id==likedScanId)scanLikedPage(next,n+1);});return;}
+        likedAll=likedTmp;likedAt=QDateTime::currentDateTime();likedScanning=false;publishLiked();
+    },true,false,[this,id]{
+        if(id!=likedScanId)return;
+        // Keep what was found so far, but read the library again next time.
+        likedAll=likedTmp;likedAt=QDateTime();likedScanning=false;publishLiked();
     });
 }

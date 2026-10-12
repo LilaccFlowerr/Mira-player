@@ -20,7 +20,7 @@ ApplicationWindow {
     property bool narrow: width < 980
     // Phone layout: bottom navigation instead of the sidebar, compact player. Always on Android.
     readonly property bool phone: Qt.platform.os === "android" || width < 600
-    readonly property string navKey: activePage===1 ? "settings" : music.mode===1 ? "search" : music.mode===2 ? "liked" : (music.mode===3||music.mode===4) ? "playlists" : "home"
+    readonly property string navKey: activePage===1 ? "settings" : (music.mode===1 || music.mode===5) ? "search" : music.mode===2 ? "liked" : (music.mode===3||music.mode===4) ? "playlists" : "home"
     // Android's back button: step back through the app before leaving it.
     function goBack() {
         if(nowPlaying.opened){nowPlaying.close();return true}
@@ -41,6 +41,7 @@ ApplicationWindow {
     readonly property var focusTarget: window.activeFocusItem
     readonly property bool typing: !!focusTarget && (focusTarget.cursorPosition !== undefined || focusTarget.focusReason === Qt.TabFocusReason || focusTarget.focusReason === Qt.BacktabFocusReason)
     function navigate(mode) { activePage=0; music.mode=mode; if(auth.connected&&!spotify.busy){if(mode===2)spotify.library();if(mode===3)spotify.playlists()} }
+    function openArtist(artist) { if(!auth.connected || !artist || !artist.id)return; nowPlaying.close(); activePage=0; music.openArtist(artist) }
     function searchFor(term) { prefs.rememberSearch(term); activePage=0; search.text=term; music.searchTerm=term; music.mode=1; if(auth.connected&&!spotify.busy)spotify.search(term) }
     Settings {
         category: "window"
@@ -150,7 +151,7 @@ ApplicationWindow {
                     anchors.fill: parent; anchors.margins: window.phone ? 14 : window.width < 780 ? 18 : 28; currentIndex: window.activePage
                     onCurrentIndexChanged: pageFade.restart()
                     NumberAnimation { id: pageFade; target: pages; property: "opacity"; from: 0.4; to: 1; duration: 200; easing.type: Easing.OutCubic }
-                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSongInfoRequested: track=>songInfo.openFor(track); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
+                    MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSongInfoRequested: track=>songInfo.openFor(track); onArtistRequested: artist=>window.openArtist(artist); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
                     SettingsPage { phone: window.phone; }
                 }
             }
@@ -169,8 +170,8 @@ ApplicationWindow {
             }
         }
     }
-    NowPlaying { id: nowPlaying; bar: playerBar; onInfoRequested: track=>songInfo.openFor(track) }
-    SongInfo { id: songInfo; onSearchRequested: term=>window.searchFor(term) }
+    NowPlaying { id: nowPlaying; bar: playerBar; onInfoRequested: track=>songInfo.openFor(track); onArtistRequested: artist=>window.openArtist(artist) }
+    SongInfo { id: songInfo; onSearchRequested: term=>window.searchFor(term); onArtistRequested: artist=>window.openArtist(artist) }
     Rectangle {
         id: snackbar
         property string text: ""

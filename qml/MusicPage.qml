@@ -8,13 +8,20 @@ ScrollView {
     signal navigateRequested(int mode)
     signal playerRequested()
     signal songInfoRequested(var track)
+    signal artistRequested(var artist)
     property int mode: 0
+    // Rows get the page through this name: inside a row, plain "page" would mean the row's own property.
+    readonly property var pageRef: page
     property string searchTerm: ""
     property var selectedPlaylist: ({})
-    readonly property bool matching: (mode===1 && spotify.collection==="search") || (mode===2 && spotify.collection==="library") || (mode===3 && spotify.collection==="playlists") || (mode===4 && spotify.collection==="playlist")
-    readonly property var entries: mode===0 ? spotify.playlistItems : matching ? spotify.items : []
+    // Where the back button goes from an artist page (the page it was opened from) and from an album.
+    property int artistBack: 1
+    property int albumBack: 3
+    readonly property bool isAlbum: selectedPlaylist.type === "album"
+    readonly property bool matching: (mode===1 && spotify.collection==="search") || (mode===2 && spotify.collection==="library") || (mode===3 && spotify.collection==="playlists") || (mode===4 && spotify.collection===(isAlbum ? "album" : "playlist"))
+    readonly property var entries: mode===0 ? spotify.playlistItems : mode===5 ? spotify.artistTracks : matching ? spotify.items : []
     readonly property bool failure: ["error","quota","offline"].indexOf(spotify.state)>=0
-    readonly property bool trackList: mode===1 || mode===2 || mode===4
+    readonly property bool trackList: mode===1 || mode===2 || mode===4 || mode===5
     // Phone-sized page: fewer columns and smaller decorations.
     readonly property bool compact: width < 600
     // On Android, Play also works without a device yet: Mira then opens the Spotify app on the phone.
@@ -39,7 +46,16 @@ ScrollView {
         return seen
     }
     function focusFilter() { if(mode===2||mode===4)filterField.forceActiveFocus() }
-    function openPlaylist(data) { if(spotify.busy)return;selectedPlaylist=data;mode=4;spotify.playlist(data.id) }
+    function openPlaylist(data) { if(spotify.busy)return;selectedPlaylist=data;albumBack=3;mode=4;spotify.playlist(data.id) }
+    // Which list "play from here" belongs to: the artist's liked songs or the main list.
+    function playRowFrom(source, index) {
+        if(source==="liked")spotify.playFrom(spotify.artistLiked.map(e=>e.uri), index)
+        else playRow(index)
+    }
+    function copyText(text) { clipboard.text=text; clipboard.selectAll(); clipboard.copy() }
+    function askRemove(uri) { removeDialog.uri=uri; removeDialog.open() }
+    function openAlbum(data) { if(spotify.busy)return;albumBack=mode===5?5:3;selectedPlaylist=data;mode=4;spotify.album(data.id,data) }
+    function openArtist(data) { if(!data || !data.id)return;if(mode!==5)artistBack=mode===4?3:mode;mode=5;spotify.openArtist(data.id,data.name||"",data.cover||"") }
     function duration(ms) {let s=Math.floor(ms/1000);return Math.floor(s/60)+":"+(s%60).toString().padStart(2,"0")}
     clip: true; contentWidth: availableWidth
     SmoothScroll { flick: page.contentItem }
@@ -59,8 +75,8 @@ ScrollView {
         }
         RowLayout {
             Layout.fillWidth: true
-            ActionButton { symbol: "back"; hint: "Back"; compact: true; tonal: true; visible: page.mode!==0; onClicked: page.navigateRequested(page.mode===4?3:0) }
-            Label { text: page.mode===0 ? "Your music" : page.mode===1 ? "Search" : "Your library"; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true }
+            ActionButton { symbol: "back"; hint: "Back"; compact: true; tonal: true; visible: page.mode!==0; onClicked: page.navigateRequested(page.mode===4 ? (page.isAlbum ? page.albumBack : 3) : page.mode===5 ? page.artistBack : 0) }
+            Label { text: page.mode===0 ? "Your music" : page.mode===1 ? "Search" : page.mode===5 ? "Artist" : (page.mode===4 && page.isAlbum) ? "Album" : "Your library"; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true }
             Label { text: auth.connected ? "Spotify connected" : "Not connected"; color: Theme.muted; font.pixelSize: Theme.fs(11); visible: page.width>600 }
         }
         Rectangle {
@@ -110,7 +126,7 @@ ScrollView {
             }
         }
         ColumnLayout {
-            visible: page.mode!==0; Layout.fillWidth: true; spacing: 12
+            visible: page.mode!==0 && page.mode!==5; Layout.fillWidth: true; spacing: 12
             RowLayout {
                 Layout.fillWidth: true; spacing: 20
                 Item {
@@ -129,9 +145,9 @@ ScrollView {
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 8
-                    Label { text: page.mode===1 ? "SEARCH RESULTS" : page.mode===4 ? "PLAYLIST" : page.mode===2 ? "LIBRARY" : "PLAYLISTS"; font.pixelSize: Theme.fs(10); font.letterSpacing: 1.6; color: Theme.primary }
+                    Label { text: page.mode===1 ? "SEARCH RESULTS" : page.mode===4 ? (page.isAlbum ? "ALBUM" : "PLAYLIST") : page.mode===2 ? "LIBRARY" : "PLAYLISTS"; font.pixelSize: Theme.fs(10); font.letterSpacing: 1.6; color: Theme.primary }
                     Label { text: page.mode===1 ? (page.searchTerm.length ? "‘"+page.searchTerm+"’" : "Search") : page.mode===2 ? "Liked songs" : page.mode===3 ? "Your playlists" : page.selectedPlaylist.name || "Playlist"; font.pixelSize: Theme.fs(page.width>650?34:26); font.bold: true; font.letterSpacing: -0.7; color: Theme.text; Layout.fillWidth: true; wrapMode: Text.WordWrap; textFormat: Text.PlainText }
-                    Label { text: page.mode===1 ? "Search above by song or artist." : page.mode===2 ? "Songs you saved on Spotify." : page.mode===3 ? "Playlists you own or follow." : (page.selectedPlaylist.subtitle || "Spotify"); color: Theme.muted; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+                    Label { text: page.mode===1 ? "Search above by song or artist." : page.mode===2 ? "Songs you saved on Spotify." : page.mode===3 ? "Playlists you own or follow." : ((page.isAlbum && page.selectedPlaylist.year ? page.selectedPlaylist.year + " · " : "") + (page.selectedPlaylist.subtitle || "Spotify")); color: Theme.muted; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
                 }
             }
             // On phones the filter moves to its own full-width row under the buttons.
@@ -155,12 +171,34 @@ ScrollView {
                         Icon { name: "search"; color: Theme.muted; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
                         TextField {
                             id: filterField; Layout.fillWidth: true; text: page.filter; onTextEdited: page.filter=text
-                            placeholderText: page.mode===2 ? "Find in liked songs" : "Find in playlist"; color: Theme.text; placeholderTextColor: Theme.muted
+                            placeholderText: page.mode===2 ? "Find in liked songs" : page.isAlbum ? "Find in album" : "Find in playlist"; color: Theme.text; placeholderTextColor: Theme.muted
                             background: Item {} leftPadding: 0; rightPadding: 0; selectByMouse: true
                             Keys.onEscapePressed: { if(text.length)page.filter=""; else focus=false }
                             Accessible.name: "Filter loaded songs (Ctrl+F)"
                         }
                         ActionButton { symbol: "close"; compact: true; hint: "Clear filter"; visible: page.filter.length>0; onClicked: page.filter="" }
+                    }
+                }
+            }
+        }
+        // Artist page: details and play buttons first, then their songs (shown by the track list below) and releases.
+        Rectangle {
+            visible: page.mode===5; Layout.fillWidth: true
+            implicitHeight: artistRow.implicitHeight + (page.compact ? 32 : 48); radius: Theme.r(26); color: Theme.container; clip: true
+            RowLayout {
+                id: artistRow
+                anchors.fill: parent; anchors.margins: page.compact ? 16 : 24; spacing: page.compact ? 14 : 24
+                CoverArt { Layout.alignment: Qt.AlignVCenter; Layout.preferredWidth: page.compact ? 92 : 168; Layout.preferredHeight: Layout.preferredWidth; radius: width/2; source: spotify.artistInfo.cover || ""; variant: 1 }
+                ColumnLayout {
+                    Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 6
+                    Label { text: "ARTIST"; font.pixelSize: Theme.fs(10); font.bold: true; font.letterSpacing: 1.8; color: Theme.primary }
+                    Label { text: spotify.artistInfo.name || ""; font.pixelSize: Theme.fs(page.compact ? 26 : page.width>700 ? 40 : 32); font.bold: true; font.letterSpacing: -1; color: Theme.text; Layout.fillWidth: true; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight; textFormat: Text.PlainText }
+                    Label { visible: text.length>0; text: (spotify.artistInfo.genres || []).slice(0,3).join(" · "); color: Theme.muted; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+                    Flow {
+                        Layout.fillWidth: true; Layout.topMargin: 6; spacing: 10
+                        ActionButton { symbol: "play"; text: "Play"; filled: true; enabled: auth.connected && page.canPlay; onClicked: spotify.playArtist(spotify.artistInfo.uri, false) }
+                        ActionButton { symbol: "shuffle"; text: "Shuffle"; tonal: true; enabled: auth.connected && page.canPlay; onClicked: spotify.playArtist(spotify.artistInfo.uri, true) }
+                        ActionButton { symbol: "external"; text: "Open in Spotify"; tonal: true; onClicked: spotify.openSpotify(spotify.artistInfo.url) }
                     }
                 }
             }
@@ -214,7 +252,7 @@ ScrollView {
                 ActionButton { symbol: "refresh"; hint: "Try again"; enabled: !spotify.busy&&auth.connected; onClicked: spotify.retry() }
             }
         }
-        LoadingIndicator { running: spotify.busy; Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: 56; Layout.preferredHeight: 56; Accessible.name: "Loading music" }
+        LoadingIndicator { running: spotify.busy || (page.mode===5 && spotify.artistLoading); Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: 56; Layout.preferredHeight: 56; Accessible.name: "Loading music" }
         ColumnLayout {
             visible: page.mode===1 && page.matching && page.searchTerm.length>0 && spotify.artists.length>0; Layout.fillWidth: true; spacing: 10
             Label { text: "Artists"; font.pixelSize: Theme.fs(21); font.bold: true; color: Theme.text }
@@ -231,19 +269,33 @@ ScrollView {
                         CoverArt { Layout.alignment: Qt.AlignHCenter; Layout.preferredWidth: 72; Layout.preferredHeight: 72; radius: 36; source: modelData.cover; variant: 1 }
                         Label { text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
                     }
-                    onClicked: page.searchRequested(modelData.name)
-                    Accessible.name: "Songs by " + modelData.name
+                    onClicked: page.artistRequested(modelData)
+                    Accessible.name: "Open artist " + modelData.name
                 }
+            }
+        }
+        ColumnLayout {
+            visible: page.mode===5 && (spotify.artistLiked.length>0 || spotify.artistLikedBusy); Layout.fillWidth: true; spacing: 2
+            RowLayout {
+                Layout.fillWidth: true; Layout.bottomMargin: 8
+                Label { text: "Your liked songs"; font.pixelSize: Theme.fs(21); font.bold: true; color: Theme.text; Layout.fillWidth: true }
+                Label { visible: spotify.artistLikedBusy; text: "Reading your liked songs… " + spotify.artistLiked.length + " found"; color: Theme.muted; font.pixelSize: Theme.fs(11) }
+                Label { visible: !spotify.artistLikedBusy; text: spotify.artistLiked.length + (spotify.artistLiked.length===1 ? " song" : " songs"); color: Theme.muted; font.pixelSize: Theme.fs(11) }
+                ActionButton { visible: !spotify.artistLikedBusy && spotify.artistLiked.length>0; text: "Play"; symbol: "play"; compact: true; tonal: true; enabled: page.canPlay; onClicked: page.playRowFrom("liked", 0) }
+            }
+            Repeater {
+                model: page.mode===5 ? spotify.artistLiked : []
+                delegate: TrackRow { page: pageRef; source: "liked" }
             }
         }
         RowLayout {
             visible: page.mode===0 || page.entries.length>0; Layout.fillWidth: true
             Label { text: page.mode===0 ? "Your playlists" : page.mode===3 ? "In your library" : "Songs"; font.pixelSize: Theme.fs(21); font.bold: true; color: Theme.text; Layout.fillWidth: true }
             ActionButton { visible: page.mode===0; text: "See all"; symbol: "arrow"; compact: true; onClicked: page.navigateRequested(3) }
-            Label { visible: page.mode!==0; text: page.shown.length!==page.entries.length ? page.shown.length + " of " + page.entries.length + " loaded" : page.entries.length + " loaded"; color: Theme.muted; font.pixelSize: Theme.fs(11) }
+            Label { visible: page.mode!==0 && page.mode!==5; text: page.shown.length!==page.entries.length ? page.shown.length + " of " + page.entries.length + " loaded" : page.entries.length + " loaded"; color: Theme.muted; font.pixelSize: Theme.fs(11) }
         }
         Rectangle {
-            visible: page.entries.length===0 && !spotify.busy && !(page.mode===1&&!page.searchTerm.length)
+            visible: page.entries.length===0 && !spotify.busy && page.mode!==5 && !(page.mode===1&&!page.searchTerm.length)
             Layout.fillWidth: true; implicitHeight: 108; radius: Theme.r(22); color: Theme.elevated
             RowLayout {
                 anchors.fill: parent; anchors.margins: 20; spacing: 18
@@ -311,54 +363,41 @@ ScrollView {
             }
             Repeater {
                 model: page.trackList ? page.shown : []
-                delegate: ItemDelegate {
-                    id: trackRow
-                    required property var modelData
-                    required property int index
-                    readonly property bool current: !!modelData.uri && modelData.uri===spotify.playback.uri
-                    Layout.fillWidth: true; implicitHeight: page.compact ? 64 : 72; padding: page.compact ? 6 : 10; hoverEnabled: true
-                    background: Rectangle { radius: Theme.r(16); color: trackRow.hovered||trackRow.visualFocus ? Theme.elevated : trackRow.current ? Theme.container : "transparent"; border.width: trackRow.visualFocus?1:0; border.color: Theme.primary }
-                    contentItem: RowLayout {
-                        spacing: 12
-                        ActionButton {
-                            text: trackRow.hovered || trackRow.current ? "" : String(trackRow.index+1)
-                            symbol: trackRow.hovered ? (trackRow.current && spotify.playback.playing ? "pause" : "play") : trackRow.current ? "bars" : ""
-                            ink: trackRow.current ? Theme.primary : Theme.text
-                            implicitWidth: 30; compact: true; hint: (trackRow.current && spotify.playback.playing ? "Pause " : "Play ") + modelData.name; enabled: page.canPlay
-                            onClicked: trackRow.current ? spotify.togglePlayback() : page.playRow(trackRow.index)
+                delegate: TrackRow { page: pageRef; source: "main" }
+            }
+        }
+        ColumnLayout {
+            visible: page.mode===5 && spotify.artistAlbums.length>0; Layout.fillWidth: true; spacing: 12
+            Label { text: "Albums and singles"; font.pixelSize: Theme.fs(21); font.bold: true; color: Theme.text }
+            GridLayout {
+                columns: Math.max(2,Math.floor(page.width/190)); uniformCellWidths: true; Layout.fillWidth: true; columnSpacing: 16; rowSpacing: 20
+                Repeater {
+                    model: page.mode===5 ? spotify.artistAlbums : []
+                    delegate: ColumnLayout {
+                        required property var modelData
+                        Layout.fillWidth: true; Layout.preferredWidth: 180; Layout.minimumWidth: 0; Layout.alignment: Qt.AlignTop; spacing: 8
+                        Item {
+                            Layout.fillWidth: true; Layout.preferredHeight: width
+                            CoverArt {
+                                anchors.fill: parent; source: modelData.cover
+                                scale: albumArea.containsMouse ? 1.03 : 1
+                                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            }
+                            MouseArea { id: albumArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: page.openAlbum(modelData) }
+                            ActionButton { anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: 8; symbol: "play"; filled: true; hint: "Play " + modelData.name; enabled: page.canPlay; onClicked: spotify.play(modelData.uri) }
                         }
-                        CoverArt { source: modelData.cover; Layout.preferredWidth: 46; Layout.preferredHeight: 46 }
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 5
-                            Label { text: modelData.name; color: trackRow.current ? Theme.primary : Theme.text; font.bold: true; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
-                            Label { text: (modelData.explicit ? "[E]  " : "") + modelData.subtitle; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
+                        Button {
+                            text: modelData.name; Layout.fillWidth: true; Layout.minimumWidth: 0; implicitWidth: 0; implicitHeight: 24; padding: 0
+                            background: Rectangle { radius: Theme.r(6); color: "transparent"; border.width: parent.visualFocus?1:0; border.color: Theme.primary }
+                            contentItem: Text { text: parent.text; width: parent.width; color: Theme.text; font.bold: true; font.pixelSize: Theme.fs(14); elide: Text.ElideRight; horizontalAlignment: Text.AlignLeft; verticalAlignment: Text.AlignVCenter; textFormat: Text.PlainText }
+                            onClicked: page.openAlbum(modelData)
                         }
-                        Label { text: modelData.album; color: Theme.muted; Layout.preferredWidth: page.width*0.22; elide: Text.ElideRight; visible: page.width>800; font.pixelSize: Theme.fs(12); textFormat: Text.PlainText }
-                        Label { visible: !page.compact; text: page.duration(modelData.duration); color: Theme.muted; font.pixelSize: Theme.fs(11); Layout.preferredWidth: 38 }
-                        ActionButton { visible: !page.compact; symbol: "plus"; hint: "Save to Spotify"; compact: true; onClicked: spotify.save(modelData.uri) }
-                        ActionButton { id: moreButton; symbol: "more"; hint: "More actions for " + modelData.name; compact: true; implicitWidth: 44; onClicked: trackMenu.popup(moreButton, 0, moreButton.height) }
-                    }
-                    // Phone: one tap on the song plays it, only the three dots open the menu. Desktop: double click.
-                    onClicked: {if(page.compact && page.canPlay)page.playRow(trackRow.index)}
-                    onDoubleClicked: {if(!page.compact && page.canPlay)page.playRow(trackRow.index)}
-                    // Right click opens the menu on desktop only: on a touch screen Qt reports a tap as a click here too.
-                    TapHandler { enabled: !page.compact; acceptedButtons: Qt.RightButton; onTapped: trackMenu.popup() }
-                    Menu {
-                        id: trackMenu
-                        MenuItem { text: "Open in Spotify ↗"; onTriggered: spotify.openSpotify(modelData.url) }
-                        MenuItem { text: "Play from here"; enabled: page.canPlay; onTriggered: page.playRow(trackRow.index) }
-                        MenuItem { text: "Play only this song"; enabled: page.canPlay; onTriggered: spotify.play(modelData.uri) }
-                        MenuItem { text: "Add to queue"; enabled: page.canPlay; onTriggered: spotify.queue(modelData.uri) }
-                        MenuItem { text: "About this song"; enabled: (modelData.uri || "").startsWith("spotify:track:"); onTriggered: page.songInfoRequested(modelData) }
-                        MenuItem { text: "Search artist"; enabled: !!(modelData.artists && modelData.artists.length); onTriggered: page.searchRequested(modelData.artists[0]) }
-                        MenuSeparator {}
-                        MenuItem { text: "Save to library"; onTriggered: spotify.save(modelData.uri) }
-                        MenuItem { text: "Copy Spotify link"; enabled: !!modelData.url; onTriggered: { clipboard.text=modelData.url; clipboard.selectAll(); clipboard.copy() } }
-                        MenuItem { text: "Remove from library…"; visible: page.mode===2; height: visible?implicitHeight:0; onTriggered: {removeDialog.uri=modelData.uri;removeDialog.open()} }
+                        Label { text: [modelData.year, modelData.albumType === "single" ? "Single" : "Album"].filter(v => !!v).join(" · "); color: Theme.muted; font.pixelSize: Theme.fs(11); Layout.fillWidth: true; elide: Text.ElideRight }
                     }
                 }
             }
         }
+        Label { visible: page.mode===5 && !spotify.artistLoading && auth.connected && spotify.artistAlbums.length===0; text: spotify.artistInfo.albumsError ? "Spotify did not return any albums for this artist to this app." : "No albums found for this artist."; color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }
         Label { visible: page.trackList && page.filter.length>0 && page.shown.length===0 && page.entries.length>0; text: "No loaded songs match ‘" + page.filter + "’." + (spotify.hasMore ? " Load more to search further." : ""); color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap; textFormat: Text.PlainText }
         ActionButton { visible: page.mode!==0&&page.matching&&spotify.hasMore; text: "Load more"; symbol: "plus"; tonal: true; enabled: !spotify.busy; onClicked: spotify.more(); Layout.alignment: Qt.AlignHCenter }
         Label { visible: page.entries.length>0; text: "Content provided by Spotify · open in Spotify for all features"; font.pixelSize: Theme.fs(10); color: Theme.muted; Layout.fillWidth: true; wrapMode: Text.WordWrap }

@@ -7,6 +7,7 @@ Popup {
     id: root
     required property var bar
     signal infoRequested(var track)
+    signal artistRequested(var artist)
     readonly property var track: spotify.playback
     readonly property var restrictions: track.disallows || ({})
     readonly property bool hasTrack: !!track.uri
@@ -105,7 +106,12 @@ Popup {
                     ToolTip.visible: parent.infoAvailable && hover.hovered; ToolTip.text: "About this song"; ToolTip.delay: 650
                     HoverHandler { id: hover }
                 }
-                Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: Theme.fs(16); Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
+                Label {
+                    text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: Theme.fs(16); Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText
+                    readonly property bool artistKnown: !!(root.track.artistIds && root.track.artistIds.length && root.track.artistIds[0])
+                    TapHandler { enabled: parent.artistKnown; onTapped: root.artistRequested({id: root.track.artistIds[0], name: root.track.artists[0], cover: ""}) }
+                    HoverHandler { enabled: parent.artistKnown; cursorShape: Qt.PointingHandCursor }
+                }
                 Label { visible: !!root.track.album; text: root.track.album || ""; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
             }
             Item { Layout.preferredHeight: 16 }

@@ -18,6 +18,14 @@ class SpotifyApi : public QObject {
     // Artists matching the last search, shown above the songs.
     Q_PROPERTY(QVariantList artists READ artists NOTIFY contentChanged)
     // Album, year and more songs of one song (see loadSongInfo); empty when closed.
+    // Artist page: details, songs by the artist and their albums and singles.
+    Q_PROPERTY(QVariantMap artistInfo READ artistInfo NOTIFY artistChanged)
+    Q_PROPERTY(QVariantList artistTracks READ artistTracks NOTIFY artistChanged)
+    Q_PROPERTY(QVariantList artistAlbums READ artistAlbums NOTIFY artistChanged)
+    Q_PROPERTY(bool artistLoading READ artistLoading NOTIFY artistChanged)
+    // The artist's songs among your liked songs; filled page by page while your library is read.
+    Q_PROPERTY(QVariantList artistLiked READ artistLiked NOTIFY artistChanged)
+    Q_PROPERTY(bool artistLikedBusy READ artistLikedBusy NOTIFY artistChanged)
     Q_PROPERTY(QVariantMap songInfo READ songInfo NOTIFY songInfoChanged)
     Q_PROPERTY(bool hasMore READ hasMore NOTIFY contentChanged)
     Q_PROPERTY(QString collection READ collection NOTIFY contentChanged)
@@ -27,6 +35,7 @@ public:
     bool busy()const{return loading;} QString message()const{return info;} QString state()const{return status;}
     QVariantList playlistItems()const{return playlistRows;}
     QVariantList items()const{return rows;} QVariantList devices()const{return deviceRows;} QVariantMap playback()const{return player;}
+    QVariantMap artistInfo()const{return artistData;} QVariantList artistTracks()const{return artistTrackRows;} QVariantList artistAlbums()const{return artistAlbumRows;} bool artistLoading()const{return artistBusy>0;} QVariantList artistLiked()const{return artistLikedRows;} bool artistLikedBusy()const{return likedScanning;}
     QVariantList artists()const{return artistRows;} QVariantMap songInfo()const{return info_;}
     bool hasMore()const{return !next.isEmpty();} QString collection()const{return kind;}
     QString deviceId()const{return selectedDevice;} void setDeviceId(QString id);
@@ -58,11 +67,16 @@ public:
     Q_INVOKABLE void setRepeat(QString mode);
     Q_INVOKABLE void openSpotify(QString url);
     Q_INVOKABLE void retry();
+    Q_INVOKABLE void openArtist(QString id,QString name,QString cover);
+    Q_INVOKABLE void playArtist(QString uri,bool shuffle=false);
+    // Loads the songs of an album; meta supplies cover and name, which album track lists do not include.
+    Q_INVOKABLE void album(QString id,QVariantMap meta);
     Q_INVOKABLE void loadSongInfo(QString uri,QString fallbackArtist=QString());
     Q_INVOKABLE void closeSongInfo();
     // Pauses a remote device when the app quits (waits briefly for Spotify to answer).
     void pauseForExit();
 signals:
+    void artistChanged();
     void localControl(QString action,int value); void changed(); void contentChanged(); void playbackChanged();
     void seeked(qint64 ms); void songInfoChanged();
     // Short user-facing feedback for actions that happen outside the current page (snackbar).
@@ -70,7 +84,9 @@ signals:
 private:
     OAuth *auth; QNetworkAccessManager network;
     bool loading=false,preferLocal=false; QString status="idle",info="Connect Spotify to choose music for your session.";
-    QVariantList rows,deviceRows,playlistRows,artistRows; QVariantMap info_; QVariantMap player; QString localDevice; QString next,kind,selectedDevice,lastPath,lastKey,nextKey; bool lastAppend=false;
+    QVariantList rows,deviceRows,playlistRows,artistRows,artistTrackRows,artistAlbumRows; QVariantMap artistData,rowDefaults; int artistBusy=0,artistToken=0;
+    QVariantList artistLikedRows,likedAll,likedTmp; QDateTime likedAt; bool likedScanning=false; int likedScanId=0;
+    void scanLiked(); void scanLikedPage(QString path,int n); void publishLiked(); QVariantMap info_; QVariantMap player; QString localDevice; QString next,kind,selectedDevice,lastPath,lastKey,nextKey; bool lastAppend=false;
     QTimer poll,trackEnd; int pollTicks=0;
     QElapsedTimer clock,noticeClock; QString lastNotice;
     QDateTime blockedUntil; int generation=0;

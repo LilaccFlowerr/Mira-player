@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Popup {
     id: root
     signal searchRequested(string term)
+    signal artistRequested(var artist)
     property var track: ({})
     readonly property var info: spotify.songInfo.uri === track.uri ? spotify.songInfo : ({})
     readonly property bool ready: !!info.ready
@@ -52,7 +53,7 @@ Popup {
             RowLayout {
                 visible: root.ready && !!root.artistName; Layout.fillWidth: true
                 Label { text: "More from " + root.artistName; font.bold: true; color: Theme.primary; Layout.fillWidth: true; elide: Text.ElideRight; textFormat: Text.PlainText }
-                ActionButton { text: "See all"; compact: true; onClicked: { root.searchRequested(root.artistName); root.close() } }
+                ActionButton { text: "Artist page"; compact: true; onClicked: { if(root.info.artistId)root.artistRequested({id: root.info.artistId, name: root.artistName, cover: ""});else root.searchRequested(root.artistName); root.close() } }
                 ActionButton { symbol: "external"; compact: true; visible: !!root.info.artistUrl; hint: "Open artist in Spotify"; onClicked: spotify.openSpotify(root.info.artistUrl) }
             }
             Repeater {
