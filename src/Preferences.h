@@ -6,8 +6,6 @@ class Preferences : public QObject {
     Q_PROPERTY(QString clientId READ clientId WRITE setClientId NOTIFY changed)
     Q_PROPERTY(int accent READ accent WRITE setAccent NOTIFY changed)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY changed)
-    Q_PROPERTY(int minutes READ minutes WRITE setMinutes NOTIFY changed)
-    Q_PROPERTY(QString mood READ mood WRITE setMood NOTIFY changed)
     Q_PROPERTY(bool autoStartPlayer READ autoStartPlayer WRITE setAutoStartPlayer NOTIFY changed)
     // 0 = sharp, 1 = default, 2 = extra round
     Q_PROPERTY(int roundness READ roundness WRITE setRoundness NOTIFY changed)
@@ -26,10 +24,8 @@ public:
     int accent() const { return settings.value("accent",0).toInt(); }
     void setAccent(int v);
     bool dark() const { return settings.value("dark",true).toBool(); }
-    int minutes() const { return settings.value("minutes",25).toInt(); }
-    QString mood() const;
     bool autoStartPlayer() const { return settings.value("autoStartPlayer",true).toBool(); }
-    void setClientId(QString v); void setDark(bool v); void setMinutes(int v); void setMood(QString v); void setAutoStartPlayer(bool v);
+    void setClientId(QString v); void setDark(bool v); void setAutoStartPlayer(bool v);
     int roundness() const { return settings.value("roundness",1).toInt(); }
     int fontStyle() const { return settings.value("fontStyle",0).toInt(); }
     int textSize() const { return settings.value("textSize",1).toInt(); }

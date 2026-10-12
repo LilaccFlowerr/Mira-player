@@ -15,7 +15,7 @@ Popup {
     // Lyrics replace the cover while the lyrics button is on.
     property bool showLyrics: false
     readonly property bool lyricsActive: showLyrics && prefs.lyrics && hasTrack
-    readonly property real coverSize: Math.min(root.height * 0.42, root.width - 64, 420)
+    readonly property real coverSize: Math.min((root.height - 80) * 0.42, root.width - 64, 420)
     function loadLyrics() {
         if(lyricsActive) lyrics.load(track.uri || "", track.name || "", (track.artists && track.artists.length) ? track.artists[0] : (track.subtitle || ""), track.album || "", track.duration || 0)
     }
@@ -60,67 +60,82 @@ Popup {
             opacity: visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 400 } }
         }
-        Rectangle { anchors.fill: parent; color: Theme.base; opacity: backdropRoot.fancy && backdrop.status === Image.Ready ? 0.68 : 1 }
-        FloatingShapes {
-            anchors.fill: parent; visible: backdropRoot.fancy
-            running: root.visible && !!root.track.playing
-            shapeOpacity: 0.07
-        }
+        Rectangle { anchors.fill: parent; color: Theme.base; opacity: backdropRoot.fancy && backdrop.status === Image.Ready ? 0.66 : 1 }
     }
     contentItem: Item {
-        ActionButton {
-            anchors.left: parent.left; anchors.top: parent.top; anchors.margins: 20
-            symbol: "down"; tonal: true; hint: "Close (Esc)"; onClicked: root.close()
+        // Top row like the phone: close on the left, lyrics on the right.
+        RowLayout {
+            id: topRow
+            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 20
+            spacing: 6
+            ActionButton { symbol: "down"; selected: true; hint: "Close (Esc)"; onClicked: root.close() }
+            Item { Layout.fillWidth: true }
+            ActionButton { symbol: "queue"; hint: "Reset queue: play on from this song in order"; enabled: root.bar.available && root.hasTrack; onClicked: spotify.resetQueue() }
+            ActionButton { symbol: "plus"; hint: "Save to your library"; enabled: root.bar.available && (root.track.uri || "").startsWith("spotify:track:"); onClicked: spotify.save(root.track.uri) }
+            ActionButton { symbol: "lyrics"; visible: prefs.lyrics; selected: root.showLyrics; hint: root.showLyrics ? "Show the cover" : "Show lyrics"; enabled: root.hasTrack; onClicked: root.showLyrics = !root.showLyrics }
         }
         ColumnLayout {
-            anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter
+            anchors.top: topRow.bottom; anchors.bottom: parent.bottom; anchors.bottomMargin: 20; anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(parent.width - (root.compactView ? 32 : 64), 620)
-            spacing: root.compactView ? 14 : 18
-            CoverArt {
+            spacing: 0
+            Item { visible: !root.lyricsActive; Layout.fillHeight: true; Layout.fillWidth: true }
+            // The cover shrinks a little while paused and springs back when the music plays.
+            Item {
                 visible: !root.lyricsActive
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: root.coverSize; Layout.maximumWidth: root.width - 64; Layout.preferredHeight: Layout.preferredWidth
-                source: root.track.cover || ""; variant: 3
+                scale: root.hasTrack && !root.track.playing ? 0.88 : 1
+                Behavior on scale { SpringAnimation { spring: 1.6; damping: 0.2; epsilon: 0.002 } }
+                CrossfadeCover { anchors.fill: parent; source: root.track.cover || "" }
             }
             LyricsView {
                 visible: root.lyricsActive
-                Layout.fillWidth: true; Layout.preferredHeight: Math.max(root.coverSize, 240)
+                Layout.fillWidth: true; Layout.fillHeight: true
                 position: root.position
             }
+            Item { Layout.preferredHeight: 24 }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 4
-                Label { text: root.hasTrack ? root.track.name : "Nothing playing"; color: Theme.text; font.pixelSize: Theme.fs(root.compactView ? 24 : 28); font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
-                Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: Theme.fs(16); Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
-                Label { visible: !!root.track.album; text: root.track.album || ""; color: Theme.muted; font.pixelSize: Theme.fs(12); opacity: 0.8; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
+                Label {
+                    text: root.hasTrack ? root.track.name : "Nothing playing"; color: Theme.text; font.pixelSize: Theme.fs(24); font.bold: true
+                    Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText
+                    readonly property bool infoAvailable: (root.track.uri || "").startsWith("spotify:track:")
+                    TapHandler { enabled: parent.infoAvailable; onTapped: { root.close(); root.infoRequested(root.track) } }
+                    HoverHandler { enabled: parent.infoAvailable; cursorShape: Qt.PointingHandCursor }
+                    ToolTip.visible: parent.infoAvailable && hover.hovered; ToolTip.text: "About this song"; ToolTip.delay: 650
+                    HoverHandler { id: hover }
+                }
+                Label { text: root.hasTrack ? root.track.subtitle : "Choose a song to start"; color: Theme.muted; font.pixelSize: Theme.fs(16); Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
+                Label { visible: !!root.track.album; text: root.track.album || ""; color: Theme.muted; font.pixelSize: Theme.fs(12); Layout.fillWidth: true; Layout.minimumWidth: 0; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; textFormat: Text.PlainText }
             }
-            ColumnLayout {
-                Layout.fillWidth: true; spacing: 2
-                WavyProgress {
-                    id: wave
-                    Layout.fillWidth: true; implicitHeight: 28
-                    position: root.position; duration: root.track.duration || 0
-                    playing: !!root.track.playing
-                    seekable: root.bar.available && root.hasTrack && !root.track.restricted && !root.restrictions.seeking
-                    onSeekRequested: ms => spotify.seek(Math.round(ms))
-                }
-                RowLayout {
-                    Layout.fillWidth: true
-                    Label { text: root.bar.time(wave.shown); color: Theme.muted; font.pixelSize: Theme.fs(11); font.features: ({"tnum": 1}) }
-                    Item { Layout.fillWidth: true }
-                    Label { text: root.bar.time(root.track.duration || 0); color: Theme.muted; font.pixelSize: Theme.fs(11); font.features: ({"tnum": 1}) }
-                }
+            Item { Layout.preferredHeight: 16 }
+            WavyProgress {
+                id: wave
+                Layout.fillWidth: true; implicitHeight: 28
+                position: root.position; duration: root.track.duration || 0
+                playing: !!root.track.playing
+                seekable: root.bar.available && root.hasTrack && !root.track.restricted && !root.restrictions.seeking
+                onSeekRequested: ms => spotify.seek(Math.round(ms))
             }
             RowLayout {
-                Layout.alignment: Qt.AlignHCenter; spacing: root.compactView ? 6 : 14
+                Layout.fillWidth: true
+                Label { text: root.bar.time(wave.shown); color: Theme.muted; font.pixelSize: Theme.fs(11); font.features: ({"tnum": 1}) }
+                Item { Layout.fillWidth: true }
+                Label { text: root.bar.time(root.track.duration || 0); color: Theme.muted; font.pixelSize: Theme.fs(11); font.features: ({"tnum": 1}) }
+            }
+            Item { Layout.preferredHeight: 8 }
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter; spacing: 6
                 ActionButton { symbol: "shuffle"; selected: !!root.track.shuffle; hint: "Shuffle (Ctrl+S)"; enabled: root.bar.available && root.hasTrack && !root.restrictions.toggling_shuffle; onClicked: spotify.setShuffle(!root.track.shuffle) }
                 ActionButton { symbol: "previous"; hint: "Previous (Ctrl+←)"; enabled: root.bar.available && !root.track.restricted && !root.restrictions.skipping_prev; onClicked: spotify.command("previous") }
-                ActionButton { symbol: root.track.playing ? "pause" : "play"; filled: true; implicitWidth: 76; implicitHeight: 60; hint: root.track.playing ? "Pause (Space)" : "Play (Space)"; enabled: root.bar.available && !root.track.restricted; onClicked: spotify.togglePlayback() }
+                ActionButton { symbol: root.track.playing ? "pause" : "play"; filled: true; implicitWidth: 68; implicitHeight: 68; hint: root.track.playing ? "Pause (Space)" : "Play (Space)"; enabled: root.bar.available && !root.track.restricted; onClicked: spotify.togglePlayback() }
                 ActionButton { symbol: "next"; hint: "Next (Ctrl+→)"; enabled: root.bar.available && !root.track.restricted && !root.restrictions.skipping_next; onClicked: spotify.command("next") }
                 ActionButton { symbol: root.track.repeat==="track" ? "repeatOne" : "repeat"; selected: !!root.track.repeat && root.track.repeat!=="off"; hint: "Repeat (Ctrl+R)"; enabled: root.bar.available && root.hasTrack; onClicked: root.bar.cycleRepeat() }
             }
+            Item { Layout.preferredHeight: 12 }
             RowLayout {
                 Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 8
-                ActionButton { symbol: (root.track.volume||0)===0 && root.hasTrack ? "mute" : "volume"; compact: true; hint: "Mute (Ctrl+M)"; enabled: root.bar.volumeAvailable; onClicked: root.bar.toggleMute() }
+                ActionButton { symbol: (root.track.volume||0)===0 && root.hasTrack ? "mute" : "volume"; hint: "Mute (Ctrl+M)"; enabled: root.bar.volumeAvailable; onClicked: root.bar.toggleMute() }
                 Slider {
                     id: volume
                     Layout.fillWidth: true; Layout.minimumWidth: 0; from: 0; to: 100; stepSize: 1; wheelEnabled: true
@@ -129,20 +144,17 @@ Popup {
                     Timer { id: commit; interval: 150; onTriggered: spotify.setVolume(Math.round(volume.value)) }
                     Accessible.name: "Volume"
                 }
-                ActionButton { symbol: "lyrics"; compact: true; visible: prefs.lyrics; selected: root.showLyrics; hint: root.showLyrics ? "Show the cover" : "Show lyrics"; enabled: root.hasTrack; onClicked: root.showLyrics = !root.showLyrics }
-                ActionButton { symbol: "queue"; compact: true; hint: "Reset queue: play on from this song in order"; enabled: root.bar.available && root.hasTrack; onClicked: spotify.resetQueue() }
-                ActionButton { symbol: "info"; compact: true; hint: "About this song"; enabled: root.hasTrack && (root.track.uri || "").startsWith("spotify:track:"); onClicked: { root.close(); root.infoRequested(root.track) } }
-                ActionButton { symbol: "plus"; compact: true; hint: "Save to your library"; enabled: root.bar.available && (root.track.uri || "").startsWith("spotify:track:"); onClicked: spotify.save(root.track.uri) }
-                ActionButton { symbol: "device"; compact: true; hint: "Devices (Ctrl+D)"; onClicked: { root.close(); root.bar.openDevices() } }
+                ActionButton { symbol: "device"; hint: "Devices (Ctrl+D)"; onClicked: { root.close(); root.bar.openDevices() } }
             }
             Label {
-                Layout.alignment: Qt.AlignHCenter
+                Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 4
                 visible: root.hasTrack
                 text: (root.track.device ? "Playing on " + root.track.device + "  ·  " : "") + "Open in Spotify ↗"
                 color: Theme.primary; font.pixelSize: Theme.fs(12); textFormat: Text.PlainText
                 TapHandler { onTapped: { if(root.track.url)spotify.openSpotify(root.track.url) } }
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
             }
+            Item { visible: !root.lyricsActive; Layout.fillHeight: true; Layout.fillWidth: true }
         }
     }
 }

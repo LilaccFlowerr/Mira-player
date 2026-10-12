@@ -4,7 +4,7 @@
 
 *Formerly called Luwte. Settings and a saved sign-in from Luwte are carried over automatically on first start.*
 
-An independent Qt 6 music companion for Spotify with a Material Expressive interface: library sidebar, global search bar, playlist cards, compact track lists with album art and a fixed player bar with a wavy progress line. Rounded panels, tonal colours and shapes are visually inspired by Caelestia Shell, without using its code. Three accent palettes, light/dark themes and keyboard control; the sidebar collapses into a compact navigation rail in small windows. The session timer is optional and lives in the sidebar. The working name and version are set in `cmake/AppIdentity.cmake` (`-DAPP_NAME=...` overrides the visible name).
+An independent Qt 6 music companion for Spotify with a Material Expressive interface: library sidebar, global search bar, playlist cards, compact track lists with album art and a fixed player bar with a wavy progress line. Rounded panels, tonal colours and shapes are visually inspired by Caelestia Shell, without using its code. Nine colour themes, light/dark modes and keyboard control; the sidebar collapses into a compact navigation rail in small windows. The working name and version are set in `cmake/AppIdentity.cmake` (`-DAPP_NAME=...` overrides the visible name).
 
 > **On Android?** The phone version is its own app, written in Kotlin: [Mira for Android](https://github.com/LilaccFlowerr/Mira-Android).
 
@@ -69,7 +69,7 @@ cmake --build --preset release --parallel 2
 ./build/mira
 ```
 
-On Linux a working user session with Secret Service (GNOME Keyring, or KWallet with Secret Service) and `/usr/bin/secret-tool` is needed to stay signed in. Without a keyring the app keeps tokens in memory only. The focus timer needs no extra service.
+On Linux a working user session with Secret Service (GNOME Keyring, or KWallet with Secret Service) and `/usr/bin/secret-tool` is needed to stay signed in. Without a keyring the app keeps tokens in memory only.
 
 Windows: install Qt 6.8+ MSVC 2022 x64, Visual Studio C++ Build Tools, CMake/Ninja and NSIS; run the CMake commands above in a Developer PowerShell with Qt on PATH/CMAKE_PREFIX_PATH. Start `build/mira.exe`.
 
@@ -123,15 +123,15 @@ The progress line follows Material 3 Expressive: the played part waves while mus
 - **Lyrics:** press the lyrics button in the large player (Ctrl+P). Synced lyrics follow the music and a click on a line jumps there; songs without timing show plain text. They come from [LRCLIB](https://lrclib.net), which receives the song, artist and album name and the song length. Switch it off in Settings and nothing is sent.
 - **About this song** (song menu or the info button in the large player): album, year and more songs by the artist; play the album or open it in Spotify. Search results also show matching artists above the songs.
 - **Recent searches:** your last eight searches appear on the Search page; Clear removes them.
-- **Appearance (Settings):** nine themes (Lavender, Sage, Peach, Ocean, Rose, Amber, Crimson, Forest, Graphite) in light and dark, true black for the dark theme, corner roundness (sharp, default, extra round), font (default, serif, monospace) and text size. The large player has a blurred cover as background with two slow shapes that only move while music plays; switch it off in Settings. Mouse-wheel scrolling glides smoothly everywhere. "Pause music on another device when Mira closes" is optional too.
+- **Appearance (Settings):** nine themes (Lavender, Sage, Peach, Ocean, Rose, Amber, Crimson, Forest, Graphite) in light and dark, true black for the dark theme, corner roundness (sharp, default, extra round), font (default, serif, monospace) and text size. The large player follows the phone app: a blurred cover as background (switch it off in Settings), a cover that shrinks while paused, and a title you can click for the song info. Mouse-wheel scrolling glides smoothly everywhere. "Pause music on another device when Mira closes" is optional too.
 
 ## Desktop media controls (Linux)
 
 On Linux Mira registers an MPRIS 2 player (`org.mpris.MediaPlayer2.mira`) on the session bus. KDE Plasma's media widget, GNOME's media controls, lock screens, `playerctl` and hardware media keys show the current title, artists, album and cover, and can play/pause, skip, seek, change volume, shuffle and repeat. "Raise" brings the Mira window to the front. This works for the built-in player and for remote Spotify devices. Chromium's own media-session integration is disabled inside the embedded player so only one entry appears. Windows (SMTC) and macOS (Now Playing) integrations are not implemented yet.
 
-## Focus and privacy
+## Privacy
 
-The optional session timer sits at the bottom of the sidebar, not on the music home screen. Calm, Bright and Space only change that timer view. Session length 5–120 minutes, pause/resume/reset. The timer triggers no Spotify actions, sounds or alarm music. No listening history, profiles, statistics, metadata export or Spotify catalogue service. See [privacy](docs/PRIVACY.md).
+No listening history, profiles, statistics, metadata export or Spotify catalogue service. See [privacy](docs/PRIVACY.md).
 
 ## Limitations
 
@@ -143,7 +143,7 @@ The optional session timer sits at the bottom of the sidebar, not on the music h
 
 ## Structure and releases
 
-`src/`: separate OAuth, WebPlayback, API, keyring, preferences, timer and MPRIS components. `qml/`: interface. `third_party/`: vendored M3Shapes source. `cmake/` and `packaging/`: metadata/installers. `.github/workflows/release.yml`: native platform builds. No test suites run or included in the workflow, as requested.
+`src/`: separate OAuth, WebPlayback, API, keyring, preferences, lyrics and MPRIS components. `qml/`: interface. `third_party/`: vendored M3Shapes source. `cmake/` and `packaging/`: metadata/installers. `.github/workflows/release.yml`: native platform builds. No test suites run or included in the workflow, as requested.
 
 Build a package for the current platform: `cpack --config build/CPackConfig.cmake -B dist`. See the [release process](docs/RELEASE.md) for the Windows .exe, Linux .rpm, macOS .app/.dmg, signing/notarisation and Qt licence sources. [Source research](docs/SOURCES.md) records API and dependency choices. Own code/icons: MIT; other components: [notices](THIRD_PARTY_NOTICES.md).
 

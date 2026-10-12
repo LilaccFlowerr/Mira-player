@@ -139,7 +139,6 @@ ApplicationWindow {
                         Label { anchors.fill: parent; anchors.margins: 8; anchors.topMargin: 24; visible: spotify.playlistItems.length===0; text: auth.connected ? "No playlists loaded.\nUse the refresh button above." : "Connect Spotify to see\nyour playlists here."; color: Theme.muted; font.pixelSize: Theme.fs(12); wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     }
                     Item { visible: window.narrow; Layout.fillHeight: true }
-                    ActionButton { text: window.narrow ? "" : "Session timer"; symbol: "timer"; hint: "Optional session timer"; Layout.fillWidth: true; onClicked: timerPopup.open() }
                     ActionButton { text: window.narrow ? "" : "Settings"; symbol: "settings"; hint: "Settings and about (Ctrl+3)"; selected: window.activePage===1; Layout.fillWidth: true; onClicked: window.activePage=1 }
                     Label { visible: !window.narrow; text: "Independent Spotify companion"; color: Theme.muted; font.pixelSize: Theme.fs(9); Layout.topMargin: 8; Layout.alignment: Qt.AlignHCenter }
                 }
@@ -152,7 +151,7 @@ ApplicationWindow {
                     onCurrentIndexChanged: pageFade.restart()
                     NumberAnimation { id: pageFade; target: pages; property: "opacity"; from: 0.4; to: 1; duration: 200; easing.type: Easing.OutCubic }
                     MusicPage { id: music; mode: initialPage===1 ? 2 : 0; onConfigure: window.activePage=1; onPlayerRequested: nowPlaying.open(); onSongInfoRequested: track=>songInfo.openFor(track); onSearchRequested: term=>window.searchFor(term); onNavigateRequested: mode=>window.navigate(mode) }
-                    SettingsPage { phone: window.phone; onTimerRequested: timerPopup.open() }
+                    SettingsPage { phone: window.phone; }
                 }
             }
         }
@@ -187,16 +186,6 @@ ApplicationWindow {
         Timer { id: hideTimer; interval: 4000; onTriggered: snackbar.opacity=0 }
         TapHandler { onTapped: snackbar.opacity=0 }
         Accessible.role: Accessible.AlertMessage; Accessible.name: text
-    }
-    Popup {
-        id: timerPopup; parent: Overlay.overlay; anchors.centerIn: parent
-        width: Math.min(920,parent.width-(window.phone?16:32)); height: Math.min(700,parent.height-(window.phone?16:32)); modal: true; padding: window.phone ? 14 : 24
-        background: Rectangle { radius: Theme.r(28); color: Theme.panel; border.color: Theme.outline }
-        ColumnLayout {
-            anchors.fill: parent
-            RowLayout { Layout.fillWidth: true; Label { text: "Session timer"; font.pixelSize: Theme.fs(20); color: Theme.text; Layout.fillWidth: true } ActionButton { symbol: "close"; hint: "Close"; onClicked: timerPopup.close() } }
-            FocusPage { Layout.fillWidth: true; Layout.fillHeight: true; onChooseMusic: {timerPopup.close();window.navigate(0)} }
-        }
     }
     Shortcut { sequence: "Ctrl+K"; onActivated: search.forceActiveFocus() }
     Shortcut { sequence: "Ctrl+F"; onActivated: { if(window.activePage===0 && (music.mode===2||music.mode===4))music.focusFilter(); else search.forceActiveFocus() } }

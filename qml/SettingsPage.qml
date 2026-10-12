@@ -6,14 +6,11 @@ ScrollView {
     SmoothScroll { flick: page.contentItem }
     property bool phone: false
     readonly property bool android: Qt.platform.os === "android"
-    signal timerRequested()
     ColumnLayout {
         width: page.availableWidth; spacing: 18
         RowLayout {
             Layout.fillWidth: true
             Label { text: "Settings"; font.pixelSize: Theme.fs(page.phone ? 26 : 30); font.bold: true; Layout.fillWidth: true; wrapMode: Text.WordWrap }
-            // The sidebar with the timer is hidden on phones, so the timer is reachable from here.
-            ActionButton { visible: page.phone; text: "Session timer"; symbol: "timer"; tonal: true; onClicked: page.timerRequested() }
         }
         Surface {
             Layout.fillWidth: true
@@ -64,7 +61,7 @@ ScrollView {
                         delegate: ActionButton { required property int index; required property string modelData; text: modelData; selected: prefs.textSize===index; tonal: true; onClicked: prefs.textSize=index }
                     }
                 }
-                Switch { text: "Blurred cover and floating shapes behind the large player"; checked: prefs.fancyPlayer; onToggled: prefs.fancyPlayer = checked; Layout.fillWidth: true }
+                Switch { text: "Blurred cover behind the large player"; checked: prefs.fancyPlayer; onToggled: prefs.fancyPlayer = checked; Layout.fillWidth: true }
                 Switch { text: "Show lyrics in the large player (looked up on lrclib.net, which receives the song, artist and album name)"; checked: prefs.lyrics; onToggled: prefs.lyrics = checked; Layout.fillWidth: true }
                 Switch { visible: !page.android; text: "Pause music playing on another Spotify device when Mira is closed"; checked: prefs.pauseOnClose; onToggled: prefs.pauseOnClose = checked; Layout.fillWidth: true }
             }
@@ -115,11 +112,11 @@ ScrollView {
             ColumnLayout {
                 anchors.fill: parent; spacing: 12
                 Label { text: "Privacy"; font.pixelSize: Theme.fs(22); font.bold: true }
-                Label { text: "Only your theme and appearance choices, window size, session length, mood, player and lyrics choices, your last eight searches and Client ID are stored locally as settings (clear the searches on the Search page). Refresh tokens go to the system keyring. Without a keyring the connection only lasts while the app is open.\n\nSearches and controls go directly to Spotify. Music data stays in memory only temporarily. With lyrics switched on, the song, artist and album name and the length of the playing song are sent to lrclib.net, a free lyrics service, when you open the large player and press the lyrics button. The built-in Web Playback SDK processes audio and account data through Spotify. The SDK also requires email and profile permission; Mira does not store that data. Your Spotify user id is read into memory only to play your whole Liked songs collection. The browser engine keeps only temporary session data. No analytics, listening history, derived statistics or listening profiles. On Linux the current track is shared with your desktop's media controls (MPRIS) on the local session bus only. The mood choice only changes this workspace.\n\nSigning out also stops the built-in audio and clears local tokens and loaded content. Also revoke access in your Spotify account. Your browser may stay signed in to Spotify."; Layout.fillWidth: true; wrapMode: Text.WordWrap; opacity: 0.85 }
+                Label { text: "Only your theme and appearance choices, window size, player and lyrics choices, your last eight searches and Client ID are stored locally as settings (clear the searches on the Search page). Refresh tokens go to the system keyring. Without a keyring the connection only lasts while the app is open.\n\nSearches and controls go directly to Spotify. Music data stays in memory only temporarily. With lyrics switched on, the song, artist and album name and the length of the playing song are sent to lrclib.net, a free lyrics service, when you open the large player and press the lyrics button. The built-in Web Playback SDK processes audio and account data through Spotify. The SDK also requires email and profile permission; Mira does not store that data. Your Spotify user id is read into memory only to play your whole Liked songs collection. The browser engine keeps only temporary session data. No analytics, listening history, derived statistics or listening profiles. On Linux the current track is shared with your desktop's media controls (MPRIS) on the local session bus only. \n\nSigning out also stops the built-in audio and clears local tokens and loaded content. Also revoke access in your Spotify account. Your browser may stay signed in to Spotify."; Layout.fillWidth: true; wrapMode: Text.WordWrap; opacity: 0.85 }
                 Flow {
                     Layout.fillWidth: true; spacing: 8
                     Button { text: "Revoke access at Spotify ↗"; onClicked: Qt.openUrlExternally("https://www.spotify.com/account/apps/") }
-                    Button { text: "Clear local preferences"; onClicked: { prefs.reset(); focusSession.reset() } }
+                    Button { text: "Clear local preferences"; onClicked: { prefs.reset() } }
                 }
             }
         }
@@ -128,7 +125,7 @@ ScrollView {
             ColumnLayout {
                 anchors.fill: parent; spacing: 12
                 Label { text: "About " + appName; font.pixelSize: Theme.fs(22); font.bold: true }
-                Label { text: "Version " + appVersion + " · MIT\nAn independent music companion with an optional session timer. Not developed, endorsed or sponsored by Spotify. Spotify content is provided by Spotify; all rights remain with their owners.\n\nBuilt with Qt 6 including WebEngine/WebChannel (LGPLv3 and Chromium licences, dynamically linked) and M3Shapes by soramanew (Apache-2.0). Original design and app icon.\n\nThis development build does not use the Spotify logo, by request. The official attribution guidelines do require a logo or icon alongside content. This must be resolved with Spotify before public distribution."; Layout.fillWidth: true; wrapMode: Text.WordWrap; opacity: 0.85 }
+                Label { text: "Version " + appVersion + " · MIT\nAn independent music companion. Not developed, endorsed or sponsored by Spotify. Spotify content is provided by Spotify; all rights remain with their owners.\n\nBuilt with Qt 6 including WebEngine/WebChannel (LGPLv3 and Chromium licences, dynamically linked) and M3Shapes by soramanew (Apache-2.0). Original design and app icon.\n\nThis development build does not use the Spotify logo, by request. The official attribution guidelines do require a logo or icon alongside content. This must be resolved with Spotify before public distribution."; Layout.fillWidth: true; wrapMode: Text.WordWrap; opacity: 0.85 }
                 Flow {
                     Layout.fillWidth: true; spacing: 8
                     Button { text: "Spotify Developer Policy ↗"; flat: true; onClicked: Qt.openUrlExternally("https://developer.spotify.com/policy") }

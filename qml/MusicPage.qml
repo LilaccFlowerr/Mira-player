@@ -85,7 +85,7 @@ ScrollView {
                     Rectangle { width: 65; height: 65; radius: 33; color: Theme.primary; anchors.centerIn: parent }
                     Rectangle { width: 14; height: 14; radius: Theme.r(7); color: Theme.container; anchors.centerIn: parent }
                 }
-                ShapeArt { width: 44; height: 44; x: 5; y: 12; variant: 2; color: Theme.primary; opacity: 0.45 }
+                ShapeArt { width: 44; height: 44; x: 5; y: 12; variant: 0; color: Theme.primary; opacity: 0.45 }
             }
             ColumnLayout {
                 anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.margins: page.compact ? 20 : 26
@@ -124,7 +124,7 @@ ScrollView {
                 }
                 Rectangle {
                     visible: page.mode===2; Layout.preferredWidth: page.width>650?126:84; Layout.preferredHeight: width; radius: Theme.r(24); color: Theme.container
-                    ShapeArt { anchors.centerIn: parent; width: parent.width*0.8; height: width; variant: 3; color: Theme.primary; opacity: 0.25 }
+                    ShapeArt { anchors.centerIn: parent; width: parent.width*0.8; height: width; variant: 4; color: Theme.primary; opacity: 0.25 }
                     Icon { anchors.centerIn: parent; width: 42; height: 42; name: "heart"; color: Theme.primary }
                 }
                 ColumnLayout {
@@ -188,7 +188,7 @@ ScrollView {
             GridLayout {
                 columns: page.width>650?4:2; Layout.fillWidth: true; columnSpacing: 12; rowSpacing: 12
                 Repeater {
-                    model: [{name:"Ambient",query:"ambient",sub:"Search",bg:"#343b33",ink:"#c3d6ad",shape:1},{name:"Electronic",query:"electronic",sub:"Search",bg:"#44313e",ink:"#efbad5",shape:2},{name:"Indie",query:"indie",sub:"Search",bg:"#40372f",ink:"#edc6a0",shape:0},{name:"Jazz",query:"jazz",sub:"Search",bg:"#303b48",ink:"#b6cdec",shape:3}]
+                    model: [{name:"Ambient",query:"ambient",sub:"Search",bg:"#343b33",ink:"#c3d6ad",shape:1},{name:"Electronic",query:"electronic",sub:"Search",bg:"#44313e",ink:"#efbad5",shape:0},{name:"Indie",query:"indie",sub:"Search",bg:"#40372f",ink:"#edc6a0",shape:0},{name:"Jazz",query:"jazz",sub:"Search",bg:"#303b48",ink:"#b6cdec",shape:3}]
                     delegate: AbstractButton {
                         id: quickCard
                         required property var modelData
@@ -266,7 +266,7 @@ ScrollView {
                     id: likedCard
                     Layout.fillWidth: true; Layout.preferredHeight: width; hoverEnabled: true
                     background: Rectangle { radius: Theme.r(likedCard.hovered ? 20 : 24); color: Theme.container; border.width: likedCard.visualFocus?2:0; border.color: Theme.primary; Behavior on radius {NumberAnimation{duration:180}} }
-                    ShapeArt { anchors.centerIn: parent; width: parent.width*0.78; height: width; variant: 3; color: Theme.primary; opacity: 0.25; turn: likedCard.hovered?20:0; Behavior on turn{NumberAnimation{duration:300;easing.type:Easing.OutCubic}} }
+                    ShapeArt { anchors.centerIn: parent; width: parent.width*0.78; height: width; variant: 4; color: Theme.primary; opacity: 0.25; turn: likedCard.hovered?20:0; Behavior on turn{NumberAnimation{duration:300;easing.type:Easing.OutCubic}} }
                     Icon { anchors.centerIn: parent; width: parent.width*0.28; height: width; name: "heart"; color: Theme.primary }
                     onClicked: page.navigateRequested(2)
                     Accessible.name: "Open liked songs"
